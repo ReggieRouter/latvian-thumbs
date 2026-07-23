@@ -58,9 +58,15 @@
     box-shadow:inset 1px 1px 0 var(--face-lite), inset -1px -1px 0 var(--sh); color:#000; cursor:pointer; }
   .tbtn:active{ border-color:var(--dk) var(--hi) var(--hi) var(--dk);
     box-shadow:inset 1px 1px 0 var(--sh), inset -1px -1px 0 var(--face-lite); }
-  #chatWin.minimized .body,#chatWin.minimized .toolbar,#chatWin.minimized .inputrow,#chatWin.minimized .roomtitle{ display:none; }
-  #chatWin.maximized{ width:100%; }
-  #chatWin.maximized .log{ height:56vh; }
+  /* the chat window is a real, movable/resizable OS-style window — dragged by its
+     titlebar, resized via the native browser grip (bottom-right corner) */
+  #chatWin{ display:flex; flex-direction:column; height:520px; min-width:380px; min-height:340px;
+    resize:both; overflow:hidden; }
+  #chatWin .titlebar{ cursor:move; user-select:none; -webkit-user-select:none; }
+  #chatWin.minimized{ resize:none; height:auto!important; }
+  #chatWin.minimized .body,#chatWin.minimized .toolbar,#chatWin.minimized .inputrow,#chatWin.minimized .roomtitle,#chatWin.minimized #typingLine{ display:none; }
+  #chatWin.maximized{ position:fixed!important; left:2vw!important; top:2vh!important;
+    width:96vw!important; height:92vh!important; margin:0!important; }
   .menubar{ display:flex; gap:2px; padding:2px 4px; flex-wrap:wrap; }
   .menubar span{ padding:2px 7px; }
   .menubar span u{ text-decoration:underline; }
@@ -74,10 +80,10 @@
   .menubar .mi:hover{ background:var(--sel); color:#fff; }
 
   /* ---- chat body ---- */
-  .body{ display:flex; gap:4px; padding:4px; }
-  .chatcol{ flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+  .body{ display:flex; gap:4px; padding:4px; flex:1; min-height:0; }
+  .chatcol{ flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; min-height:0; }
   .roomtitle{ padding:2px 4px; font-weight:bold; }
-  .log{ height:320px; overflow-y:auto; padding:6px 8px; font-size:13px; line-height:1.42; }
+  .log{ flex:1; min-height:100px; overflow-y:auto; padding:6px 8px; font-size:13px; line-height:1.42; }
   .log::-webkit-scrollbar{ width:16px; }
   .log::-webkit-scrollbar-track{ background:#cfcfcf; }
   .log::-webkit-scrollbar-thumb{ background:var(--face); border:2px solid; border-color:var(--hi) var(--sh) var(--sh) var(--hi); }
@@ -90,9 +96,9 @@
   .host .txt{ color:#404040; font-weight:normal; font-style:italic; }
 
   /* member list */
-  .members{ width:170px; flex:0 0 170px; display:flex; flex-direction:column; }
+  .members{ width:170px; flex:0 0 170px; display:flex; flex-direction:column; min-height:0; }
   .members .hd{ font-weight:bold; padding:2px 4px 4px; }
-  .mlist{ flex:1; height:320px; overflow-y:auto; padding:3px; }
+  .mlist{ flex:1; min-height:80px; overflow-y:auto; padding:3px; }
   .mrow{ display:flex; align-items:center; gap:6px; padding:2px 3px; }
   .mrow:hover{ background:var(--sel); color:#fff; }
   .mrow .run{ width:13px; height:15px; flex:0 0 13px; }
@@ -187,8 +193,9 @@
     .members{ display:none; }
     .members.mobileShow{ display:flex; position:fixed; inset:auto 10px 10px 10px; z-index:35; max-height:60vh; }
     .win{ width:100%; }
-    .log{ height:46vh; }
-    #chatWin.maximized .log{ height:60vh; }
+    /* native resize handles are unreliable on touch — drag-to-move still works via touch */
+    #chatWin{ height:78vh; resize:none; min-width:0; }
+    #chatWin.maximized{ height:94vh!important; }
     /* iOS Safari zooms the page on any input with font-size under 16px on focus — keep these at 16px on touch screens */
     .inputrow input[type=text], .field input{ font-size:16px; }
     .tool{ width:34px; height:32px; }
@@ -219,13 +226,30 @@
     <div class="tbtn" id="winClose" title="Sign off">✕</div>
   </div>
   <div class="menubar">
-    <span class="hasmenu" id="fileMenu"><u>F</u>ile<div class="dropdown" id="fileDrop" hidden><div class="mi" id="pedoItem">pedo</div></div></span><span class="hasmenu" id="editMenu"><u>E</u>dit<div class="dropdown" id="editDrop" hidden><div class="mi" id="clearViewItem">Clear View</div></div></span><span class="hasmenu" id="insertMenu"><u>I</u>nsert<div class="dropdown" id="insertDrop" hidden><div class="mi" data-emoji="🍆">Dicks</div><div class="mi" data-emoji="🧸">Toys</div><div class="mi" data-emoji="🥒">Cucumbers</div></div></span><span class="hasmenu" id="peopleMenu"><u>P</u>eople</span><span class="hasmenu" id="helpMenu"><u>H</u>elp</span>
+    <span class="hasmenu" id="fileMenu"><u>F</u>ile<div class="dropdown" id="fileDrop" hidden><div class="mi" id="pedoItem">pedo</div></div></span><span class="hasmenu" id="insertMenu"><u>I</u>nsert<div class="dropdown" id="insertDrop" hidden><div class="mi" data-emoji="🍆">Dicks</div><div class="mi" data-emoji="🧸">Toys</div><div class="mi" data-emoji="🥒">Cucumbers</div></div></span><span class="hasmenu" id="peopleMenu"><u>P</u>eople<div class="dropdown" id="peopleDrop" hidden><div class="mi" id="toggleRosterItem">Show/Hide Roster</div><div class="mi" id="myContactItem">Add My Contact Info…</div></div></span><span class="hasmenu" id="helpMenu"><u>H</u>elp</span>
   </div>
 
   <div class="body">
     <div class="chatcol">
-      <div class="roomtitle">People Here: &nbsp;<span id="hereCount">0</span></div>
+      <div class="roomtitle" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span>People Here: &nbsp;<span id="hereCount">0</span></span>
+        <span style="margin-left:auto;display:flex;gap:5px;align-items:center;font-weight:normal;">
+          <select id="filterSender" style="font-family:inherit;font-size:11px;padding:2px 3px;background:#fff;border:1px solid var(--sh);">
+            <option value="all">All senders</option>
+          </select>
+          <select id="filterLang" style="font-family:inherit;font-size:11px;padding:2px 3px;background:#fff;border:1px solid var(--sh);">
+            <option value="all">All languages</option>
+            <option value="en">English</option>
+            <option value="de">Deutsch</option>
+          </select>
+          <select id="sortOrderSel" style="font-family:inherit;font-size:11px;padding:2px 3px;background:#fff;border:1px solid var(--sh);">
+            <option value="asc">Oldest first</option>
+            <option value="desc">Newest first</option>
+          </select>
+        </span>
+      </div>
       <div class="log sunken" id="log" aria-live="polite" aria-label="Chat messages"></div>
+      <div id="typingLine" style="padding:1px 6px;font-size:11px;color:#555;font-style:italic;min-height:14px;"></div>
 
       <div class="toolbar raised" role="toolbar" aria-label="Formatting">
         <div class="tool b" id="toolBold" title="Bold selected text">B</div>
@@ -377,8 +401,10 @@
         <li>Your screen name and color are locked in <b>the first time</b> you pick them — choose wisely.</li>
         <li><b>File → pedo</b> emails Matt. You know why.</li>
         <li><b>Insert</b> drops a little something into your message.</li>
-        <li><b>Edit → Clear View</b> wipes your own screen only — nobody else's.</li>
-        <li><b>People</b> toggles the roster panel.</li>
+        <li><b>People</b> shows/hides the roster and lets you add contact info everyone can see.</li>
+        <li>Filter/sort the log by sender, language, or oldest/newest — top-right of the chat.</li>
+        <li>Type <b>/8ball your question</b> and hit Send for a Magic 8-Ball answer.</li>
+        <li>Drag the titlebar to move the window; drag the bottom-right corner to resize it (desktop).</li>
         <li>🔊 Sound toggles the door chimes — muting is judgment-free.</li>
       </ul>
       <div class="dismiss"><button class="btn" id="okAbout" style="font-weight:bold;">Got it</button></div>
@@ -391,8 +417,19 @@
   <div class="win raised videoWin">
     <div class="titlebar"><div class="t">📹 Video Call — Latvian Thumbs</div><button class="tbtn" id="closeVideo" aria-label="Close">✕</button></div>
     <div class="body">
-      <iframe class="videoFrame" id="videoFrame" allow="camera; microphone; fullscreen; display-capture; autoplay" title="Video call"></iframe>
-      <div class="videoNote">Free group video via Jitsi — same room every time you click the button. Closing this window hangs up and releases your camera/mic.</div>
+      <div id="videoPicker" style="padding:14px 16px;">
+        <p style="margin:0 0 10px;font-size:11.5px;color:#333;line-height:1.5;">Anyone in the room can join the call either way — this just decides who gets pinged in the chat.</p>
+        <div class="oauth" style="margin:0 0 12px;">
+          <button class="btn" id="ringAllBtn" style="font-weight:bold;padding:8px 12px;">🔔 Invite Everyone</button>
+        </div>
+        <div class="field" style="margin:0 0 10px;">
+          <label>Or ring specific people:</label>
+          <div class="sunken" id="ringPickList" style="max-height:150px;overflow-y:auto;padding:6px;"></div>
+        </div>
+        <div class="dismiss"><button class="btn" id="ringSelectedBtn" style="font-weight:bold;">Ring Selected</button></div>
+      </div>
+      <iframe class="videoFrame" id="videoFrame" allow="camera; microphone; fullscreen; display-capture; autoplay" title="Video call" hidden></iframe>
+      <div class="videoNote" id="videoNote" hidden>Free group video via Jitsi — same room every time. Closing this window hangs up and releases your camera/mic.</div>
     </div>
   </div>
 </div>
@@ -404,6 +441,22 @@
     <div class="body">
       <div class="reqList sunken" id="requestsList"></div>
       <div class="dismiss" style="padding:10px;"><button class="btn" id="okRequests" style="font-weight:bold;">Close</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= MY CONTACT INFO (People menu) ========================= -->
+<div class="modalwrap" id="contactModal">
+  <div class="win raised" style="width:360px;max-width:100%;">
+    <div class="titlebar"><div class="t">My Contact Info</div><button class="tbtn" id="closeContact" aria-label="Close">✕</button></div>
+    <div class="body" style="padding:14px 16px 16px;">
+      <p style="margin:0 0 10px;font-size:11.5px;color:#333;line-height:1.5;">Visible to the whole league right in the roster — phone, Venmo, Discord, whatever's useful.</p>
+      <div class="field" style="margin:0 0 12px;">
+        <label for="contactInput">Contact info:</label>
+        <div class="sunken"><input id="contactInput" maxlength="200" placeholder="e.g. Cell: 555-1234 · Venmo: @you" autocomplete="off"></div>
+      </div>
+      <div class="dismiss"><button class="btn" id="saveContactBtn" style="font-weight:bold;">Save</button></div>
+      <p class="muted" id="contactMsg" style="min-height:14px;margin-top:8px;"></p>
     </div>
   </div>
 </div>
@@ -463,18 +516,79 @@
       .replace(/__([^_\n]+?)__/g, '<u>$1</u>')
       .replace(/_([^_\n]+?)_/g, '<i>$1</i>');
   }
+  // Turns bare http(s) URLs into clickable links — applied after formatText, on
+  // already-escaped/formatted text, so it only ever wraps a URL match in a fixed
+  // safe <a> tag, never introduces attacker-controlled markup.
+  function linkify(html){
+    return html.replace(/(https?:\/\/[^\s<]+)/g, function(url){
+      return '<a href="'+url+'" target="_blank" rel="noopener noreferrer">'+url+'</a>';
+    });
+  }
   var log = $('log');
   function atBottom(){ return log.scrollTop + log.clientHeight >= log.scrollHeight - 30; }
   function scroll(){ log.scrollTop = log.scrollHeight; }
-  function addMsg(name,color,text,isBot){ var stick=atBottom(); var d=document.createElement('div'); d.className='msg';
-    var tag = isBot ? '<span class="botTag">BOT</span> ' : '';
-    d.innerHTML=tag+'<span class="sn" style="color:'+esc(color||'#00007b')+'">'+esc(name)+':</span> <span class="tx">'+formatText(esc(text))+'</span>';
-    log.appendChild(d); if(stick) scroll(); }
-  function addHost(text){ var stick=atBottom(); var d=document.createElement('div'); d.className='msg host';
-    d.innerHTML='OnlineHost:&nbsp; <span class="txt">'+esc(text)+'</span>'; log.appendChild(d); if(stick) scroll(); }
+
+  // Every chat line and system line lives here — nothing is ever removed from
+  // this array (only DOM re-renders are filtered), so "Clear View" is gone for
+  // good and all text stays retrievable via the sort/filter controls.
+  var allEntries = [];
+  var filterSender = 'all', filterLang = 'all', sortOrder = 'asc';
+  var seenSenders = {};
+  // Crude language tag — good enough to separate Lars's German bot lines from
+  // everything else without pulling in a real language-detection library.
+  function detectLang(text){ return /[äöüÄÖÜß]/.test(text) ? 'de' : 'en'; }
+  function updateSenderOptions(name){
+    if(seenSenders[name]) return; seenSenders[name]=1;
+    var opt=document.createElement('option'); opt.value=name; opt.textContent=name;
+    $('filterSender').appendChild(opt);
+  }
+  function passesFilter(e){
+    if(e.type==='host') return true;
+    if(filterSender!=='all' && e.name!==filterSender) return false;
+    if(filterLang!=='all' && e.lang!==filterLang) return false;
+    return true;
+  }
+  function renderLog(){
+    var stick = atBottom();
+    var arr = allEntries.filter(passesFilter);
+    if(sortOrder==='desc') arr = arr.slice().reverse();
+    log.innerHTML = '';
+    arr.forEach(function(e){
+      var d=document.createElement('div');
+      if(e.type==='host'){
+        d.className='msg host';
+        d.innerHTML='OnlineHost:&nbsp; <span class="txt">'+esc(e.text)+'</span>';
+      } else {
+        d.className='msg';
+        var tag = e.isBot ? '<span class="botTag">BOT</span> ' : '';
+        d.innerHTML=tag+'<span class="sn" style="color:'+esc(e.color||'#00007b')+'">'+esc(e.name)+':</span> <span class="tx">'+linkify(formatText(esc(e.text)))+'</span>';
+      }
+      log.appendChild(d);
+    });
+    if(stick) scroll();
+  }
+  function addMsg(name,color,text,isBot){
+    allEntries.push({ type:'msg', name:name, color:color, text:text, isBot:!!isBot, lang:detectLang(text) });
+    updateSenderOptions(name);
+    renderLog();
+  }
+  function addHost(text){
+    allEntries.push({ type:'host', text:text });
+    renderLog();
+  }
+  $('filterSender').addEventListener('change', function(){ filterSender=this.value; renderLog(); });
+  $('filterLang').addEventListener('change', function(){ filterLang=this.value; renderLog(); });
+  $('sortOrderSel').addEventListener('change', function(){ sortOrder=this.value; renderLog(); });
 
   /* ---------- member list (from presence) ---------- */
   var runSVG = '<svg class="run" viewBox="0 0 13 15" aria-hidden="true"><path d="M8 2.4a1.3 1.3 0 1 1-2.6 0 1.3 1.3 0 0 1 2.6 0zM6 4.2c1.6 0 2.2 1 2.6 2l1.1 2.2-1 .5-1-1.9-.2 2.2 1.5 2.4-.9.6-1.7-2.6-1.9 2.7-1-.6 1.8-2.7.2-2.6-1 1.5-1.2-.7L4 5.1c.5-.6 1.1-.9 2-.9z" fill="#e0b100" stroke="#7a5c00" stroke-width=".3"/></svg>';
+  var contactMap = {};   // uid -> contact string, shared with everyone in the room
+  async function loadContacts(){
+    try{
+      var r = await supabase.from('ff_chat_contacts').select('user_id,contact');
+      (r.data||[]).forEach(function(row){ if(row.contact) contactMap[row.user_id]=row.contact; });
+    }catch(e){}
+  }
   function renderMembers(){
     if(!channel){ return; }
     var state = channel.presenceState();
@@ -482,15 +596,28 @@
     Object.keys(state).forEach(function(k){
       (state[k]||[]).forEach(function(p){
         var nm = p.name || k; if(seen[nm]) return; seen[nm]=1;
-        rows.push({ name:nm, color:p.color||'#00007b' });
+        rows.push({ name:nm, color:p.color||'#00007b', uid:p.uid||null });
       });
     });
     rows.sort(function(a,b){ return a.name.toLowerCase()<b.name.toLowerCase()?-1:1; });
     var ml = $('mlist'); ml.innerHTML='';
-    rows.forEach(function(m){ var r=document.createElement('div'); r.className='mrow';
-      r.innerHTML=runSVG+'<span style="color:'+esc(m.color)+';font-weight:bold">'+esc(m.name)+'</span>'; ml.appendChild(r); });
+    rows.forEach(function(m){
+      var r=document.createElement('div'); r.className='mrow';
+      var c = m.uid && contactMap[m.uid] ? '<span style="font-size:10px;color:#666;">'+esc(contactMap[m.uid])+'</span>' : '';
+      r.innerHTML=runSVG+'<div style="display:flex;flex-direction:column;min-width:0;"><span style="color:'+esc(m.color)+';font-weight:bold">'+esc(m.name)+'</span>'+c+'</div>';
+      ml.appendChild(r);
+    });
     $('memCount').textContent = rows.length;
     $('hereCount').textContent = rows.length;
+  }
+  function renderTyping(){
+    if(!channel){ $('typingLine').textContent=''; return; }
+    var state = channel.presenceState(); var names=[];
+    Object.keys(state).forEach(function(k){ (state[k]||[]).forEach(function(p){
+      if(p.typing && p.name && p.name!==me.name) names.push(p.name);
+    }); });
+    $('typingLine').textContent = !names.length ? '' :
+      (names.length===1 ? names[0]+' is typing…' : names.slice(0,3).join(', ')+' are typing…');
   }
 
   /* ---------- send ---------- */
@@ -498,6 +625,13 @@
   async function send(){
     var v = input.value.trim(); if(!v) return;
     input.value='';
+    stopTyping();
+    if(/^\/8ball\b/i.test(v)){
+      var q = v.replace(/^\/8ball\s*/i,'').trim() || 'the future';
+      try{ var r = await supabase.rpc('ff_8ball', { p_question: q }); if(r && r.error) throw r.error; }
+      catch(e){ addHost('(the 8-ball is stuck — try again)'); }
+      return;
+    }
     var { error } = await supabase.from('ff_chat_messages').insert({
       room:ROOM, user_id:me.uid, screen_name:me.name, body:v, color:me.color
     });
@@ -506,6 +640,16 @@
   }
   $('sendBtn').addEventListener('click', send);
   input.addEventListener('keydown', function(e){ if(e.key==='Enter') send(); });
+
+  // Typing indicator — piggybacks on the same presence channel, no new table.
+  var typingTimer = null;
+  function stopTyping(){ clearTimeout(typingTimer); if(channel) channel.track({ name:me.name, color:me.color, uid:me.uid, typing:false }); }
+  input.addEventListener('input', function(){
+    if(!channel) return;
+    channel.track({ name:me.name, color:me.color, uid:me.uid, typing:true });
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(stopTyping, 2500);
+  });
 
   // "Insert" menu — drops an emoji into the message box
   (function insertMenu(){
@@ -528,20 +672,37 @@
     document.addEventListener('click', function(){ drop.hidden=true; });
   })();
 
-  // "Edit" menu — Clear View wipes the LOCAL log only (nobody else's, nothing in the DB)
-  (function editMenu(){
-    var mnu=$('editMenu'), drop=$('editDrop'); if(!mnu||!drop) return;
+  // "People" menu — show/hide roster (mobile) + set your own contact info,
+  // visible to the whole league in the roster.
+  (function peopleMenu(){
+    var mnu=$('peopleMenu'), drop=$('peopleDrop'); if(!mnu||!drop) return;
     mnu.addEventListener('click', function(e){ e.stopPropagation(); drop.hidden=!drop.hidden; });
-    $('clearViewItem').addEventListener('click', function(e){ e.stopPropagation(); drop.hidden=true;
-      log.innerHTML=''; addHost('*** view cleared (local only — history still loads on reload) ***'); });
+    $('toggleRosterItem').addEventListener('click', function(e){ e.stopPropagation(); drop.hidden=true;
+      document.querySelector('.members').classList.toggle('mobileShow'); });
+    $('myContactItem').addEventListener('click', function(e){ e.stopPropagation(); drop.hidden=true;
+      $('contactMsg').textContent = '';
+      $('contactInput').value = contactMap[me.uid] || '';
+      $('contactModal').classList.add('open');
+    });
     document.addEventListener('click', function(){ drop.hidden=true; });
   })();
 
-  // "People" menu — toggles the roster panel (useful on mobile, where it's hidden by default)
-  (function peopleMenu(){
-    var mnu=$('peopleMenu'); if(!mnu) return;
-    mnu.addEventListener('click', function(e){ e.stopPropagation(); $('mlist').parentElement || null;
-      document.querySelector('.members').classList.toggle('mobileShow'); });
+  (function contactPanel(){
+    var modal=$('contactModal'); if(!modal) return;
+    $('closeContact').addEventListener('click', function(){ modal.classList.remove('open'); });
+    modal.addEventListener('click', function(e){ if(e.target===modal) modal.classList.remove('open'); });
+    $('saveContactBtn').addEventListener('click', async function(){
+      var btn=this; btn.disabled=true;
+      var val = ($('contactInput').value||'').trim().slice(0,200);
+      var { error } = await supabase.from('ff_chat_contacts')
+        .upsert({ user_id: me.uid, contact: val || null }, { onConflict:'user_id' });
+      btn.disabled=false;
+      if(error){ $('contactMsg').textContent = 'Could not save: '+error.message; return; }
+      if(val) contactMap[me.uid]=val; else delete contactMap[me.uid];
+      renderMembers();
+      $('contactMsg').textContent = '✅ Saved!';
+      setTimeout(function(){ modal.classList.remove('open'); }, 700);
+    });
   })();
 
   // "Help" menu — About dialog
@@ -587,13 +748,53 @@
   })();
 
   // Video call — free Jitsi Meet, same room every time. Public server (not tied to
-  // the allowlist) so treat the link like any shareable video link; iframe src is
+  // the allowlist) so ANYONE currently in the chat can join regardless of who gets
+  // "rung" — ringing all/some just posts a chat announcement (with a clickable
+  // link) to nudge people; it is not an access-control decision. iframe src is
   // only set while the modal is open so the camera/mic release on close.
   (function videoCall(){
     var VIDEO_ROOM = 'LatvianThumbs-' + ROOM + '-9f2k7Xz';
     var VIDEO_URL = 'https://meet.jit.si/' + encodeURIComponent(VIDEO_ROOM);
-    var modal=$('videoModal'), frame=$('videoFrame'); if(!modal||!frame) return;
-    $('videoBtn').addEventListener('click', function(){ frame.src = VIDEO_URL; modal.classList.add('open'); });
+    var modal=$('videoModal'), frame=$('videoFrame'), note=$('videoNote'), picker=$('videoPicker'), pickList=$('ringPickList');
+    if(!modal||!frame) return;
+
+    function currentOthers(){
+      if(!channel) return [];
+      var state = channel.presenceState(); var seen={}, names=[];
+      Object.keys(state).forEach(function(k){ (state[k]||[]).forEach(function(p){
+        var nm=p.name||k; if(nm===me.name || seen[nm]) return; seen[nm]=1; names.push(nm);
+      }); });
+      return names.sort(function(a,b){ return a.toLowerCase()<b.toLowerCase()?-1:1; });
+    }
+    function renderPicker(){
+      var others = currentOthers();
+      if(!others.length){
+        pickList.innerHTML = '<p class="muted" style="padding:2px;">Nobody else is online right now — Invite Everyone still posts the link for whenever they check the chat.</p>';
+        return;
+      }
+      pickList.innerHTML = others.map(function(n){
+        return '<label style="display:flex;align-items:center;gap:6px;padding:3px 2px;font-size:12px;"><input type="checkbox" value="'+esc(n)+'"> '+esc(n)+'</label>';
+      }).join('');
+    }
+    async function startCall(invitedLabel){
+      picker.hidden = true; frame.hidden = false; note.hidden = false;
+      frame.src = VIDEO_URL;
+      try{
+        await supabase.from('ff_chat_messages').insert({
+          room:ROOM, user_id:me.uid, screen_name:me.name, color:me.color,
+          body: '🎥 Video call started — '+invitedLabel+'. Join: '+VIDEO_URL
+        });
+      }catch(e){ /* call still works locally even if the announcement fails */ }
+    }
+    $('videoBtn').addEventListener('click', function(){
+      picker.hidden = false; frame.hidden = true; note.hidden = true; frame.src = 'about:blank';
+      renderPicker(); modal.classList.add('open');
+    });
+    $('ringAllBtn').addEventListener('click', function(){ startCall("everyone's invited"); });
+    $('ringSelectedBtn').addEventListener('click', function(){
+      var picked = Array.prototype.slice.call(pickList.querySelectorAll('input:checked')).map(function(i){ return i.value; });
+      startCall(picked.length ? 'invited: '+picked.join(', ') : "everyone's invited");
+    });
     function closeVideo(){ modal.classList.remove('open'); frame.src = 'about:blank'; }
     $('closeVideo').addEventListener('click', closeVideo);
     modal.addEventListener('click', function(e){ if(e.target===modal) closeVideo(); });
@@ -651,10 +852,38 @@
     });
   })();
 
-  // Window controls — minimize (collapse to titlebar), maximize (fill the window +
-  // real browser Fullscreen API where supported), close (sign off, like real AOL).
+  // Window controls — drag the titlebar to move the window anywhere on screen,
+  // drag the bottom-right corner (native browser resize handle) to resize it,
+  // minimize (collapse to titlebar), maximize (fill the window + real browser
+  // Fullscreen API where supported), close (sign off, like real AOL).
   (function windowControls(){
     var win=$('chatWin');
+    var titlebar = win.querySelector('.titlebar');
+
+    var dragging=false, dragDX=0, dragDY=0;
+    function startDrag(clientX, clientY, target){
+      if(target.closest && target.closest('.tbtn')) return;
+      if(win.classList.contains('maximized')) return;
+      var r = win.getBoundingClientRect();
+      win.style.position='fixed'; win.style.margin='0';
+      win.style.left=r.left+'px'; win.style.top=r.top+'px';
+      dragging=true; dragDX=clientX-r.left; dragDY=clientY-r.top;
+      titlebar.style.cursor='grabbing';
+    }
+    function moveDrag(clientX, clientY){
+      if(!dragging) return;
+      var x=Math.min(Math.max(0, clientX-dragDX), window.innerWidth-60);
+      var y=Math.min(Math.max(0, clientY-dragDY), window.innerHeight-30);
+      win.style.left=x+'px'; win.style.top=y+'px';
+    }
+    function endDrag(){ dragging=false; titlebar.style.cursor='move'; }
+    titlebar.addEventListener('mousedown', function(e){ startDrag(e.clientX, e.clientY, e.target); });
+    document.addEventListener('mousemove', function(e){ moveDrag(e.clientX, e.clientY); });
+    document.addEventListener('mouseup', endDrag);
+    titlebar.addEventListener('touchstart', function(e){ var t=e.touches[0]; startDrag(t.clientX, t.clientY, e.target); }, {passive:true});
+    document.addEventListener('touchmove', function(e){ if(dragging){ var t=e.touches[0]; moveDrag(t.clientX, t.clientY); } }, {passive:true});
+    document.addEventListener('touchend', endDrag);
+
     $('winMin').addEventListener('click', function(){ win.classList.toggle('minimized'); });
     $('winMax').addEventListener('click', function(){
       win.classList.toggle('maximized');
@@ -708,6 +937,7 @@
 
     IS_ADMIN = !!(me.email && me.email.toLowerCase()==='stephengowa@gmail.com');
     if(IS_ADMIN){ $('reqAdminBtn').hidden = false; refreshReqBadge(); }
+    loadContacts();
 
     // realtime: messages + presence on one channel
     channel = supabase.channel('ff-room-'+ROOM, { config:{ presence:{ key: me.email } } });
@@ -718,25 +948,33 @@
       .on('postgres_changes',
         { event:'INSERT', schema:'public', table:'ff_chat_join_requests' },
         function(payload){ if(IS_ADMIN){ addHost('📨 New join request from '+payload.new.email); refreshReqBadge(); } })
+      .on('postgres_changes',
+        { event:'*', schema:'public', table:'ff_chat_contacts' },
+        function(payload){
+          var row = payload.new || payload.old; if(!row) return;
+          if(payload.eventType==='DELETE' || !row.contact){ delete contactMap[row.user_id]; }
+          else { contactMap[row.user_id] = row.contact; }
+          renderMembers();
+        })
       .on('presence', { event:'sync' }, function(){
         var state = channel.presenceState(); var keys = Object.keys(state);
         if(knownKeys === null){ knownKeys = {}; keys.forEach(function(k){ knownKeys[k]=1; }); }
-        renderMembers();
+        renderMembers(); renderTyping();
       })
       .on('presence', { event:'join' }, function(p){
         (p.newPresences||[]).forEach(function(np){
           if(knownKeys && !knownKeys[p.key] && p.key !== me.email){ addHost((np.name||'Someone')+' has entered the room.'); sndOpen(); }
         });
-        if(knownKeys) knownKeys[p.key]=1; renderMembers();
+        if(knownKeys) knownKeys[p.key]=1; renderMembers(); renderTyping();
       })
       .on('presence', { event:'leave' }, function(p){
         (p.leftPresences||[]).forEach(function(lp){ addHost((lp.name||'Someone')+' has left the room.'); sndClose(); });
-        if(knownKeys) delete knownKeys[p.key]; renderMembers();
+        if(knownKeys) delete knownKeys[p.key]; renderMembers(); renderTyping();
       })
       .subscribe(function(st){
         if(st==='SUBSCRIBED'){
           $('status').textContent = 'Connected — '+(ROOM==='league'?'Latvian Thumbs':ROOM);
-          channel.track({ name: me.name, color: me.color });
+          channel.track({ name: me.name, color: me.color, uid: me.uid });
         } else if(st==='CHANNEL_ERROR' || st==='TIMED_OUT'){
           $('status').textContent = 'Reconnecting…';
         }

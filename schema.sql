@@ -164,6 +164,72 @@ begin
   end if;
 end $$;
 
+-- ── /8ball command: posts the asker's question + an instant bot reply ─────────
+-- SECURITY DEFINER so the reply can be inserted with no user_id (a real bot
+-- row), same as ff_post_bot — but this always fires immediately, ignoring the
+-- lull guard above, because it's a direct request, not a passive scheduled post.
+create or replace function public.ff_8ball(p_question text)
+returns void language plpgsql security definer set search_path = public as $$
+declare answers text[]; ans text; asker text; asker_color text;
+begin
+  if not public.is_ff_member() then raise exception 'not a member'; end if;
+  select screen_name, color into asker, asker_color from public.ff_chat_profiles where user_id = auth.uid();
+  if asker is null then raise exception 'no profile yet'; end if;
+
+  insert into public.ff_chat_messages (room, user_id, screen_name, body, color)
+  values ('league', auth.uid(), asker, '/8ball ' || left(coalesce(p_question,''), 400), asker_color);
+
+  answers := array[
+    'It is certain.', 'Ask again after the waiver deadline.', 'Outlook not so good — bench him.',
+    'Signs point to yes.', 'Very doubtful.', 'Reply hazy, try a trade.', 'Without a doubt.',
+    'My sources say no — trade him NOW.', 'Yes — definitely start him.',
+    'Concentrate and ask again next week.', 'You already know the answer, coward.',
+    'Better not tell you — someone might cry.'
+  ];
+  ans := answers[1 + floor(random() * array_length(answers,1))::int];
+  insert into public.ff_chat_messages (room, user_id, screen_name, body, color, bot)
+  values ('league', null, 'Magic 8-Ball', ans, '#4a148c', true);
+end $$;
+revoke all on function public.ff_8ball(text) from public;
+grant execute on function public.ff_8ball(text) to authenticated;
+
+-- ── per-member contact info: freely editable, separate from the locked profile ─
+-- Deliberately its OWN table, not a column on ff_chat_profiles — that table's
+-- screen_name is permanently locked (LEN one-time-name rule) and must never get
+-- a broad "update your own row" policy, since that would let someone change
+-- their locked name/color too. Contact info is fine to edit anytime.
+create table if not exists public.ff_chat_contacts (
+  user_id     uuid primary key references auth.users(id) on delete cascade,
+  contact     text,
+  updated_at  timestamptz not null default now()
+);
+alter table public.ff_chat_contacts enable row level security;
+
+drop policy if exists "ff_contacts_select_members" on public.ff_chat_contacts;
+create policy "ff_contacts_select_members" on public.ff_chat_contacts
+  for select to authenticated using (public.is_ff_member());
+
+drop policy if exists "ff_contacts_insert_own" on public.ff_chat_contacts;
+create policy "ff_contacts_insert_own" on public.ff_chat_contacts
+  for insert to authenticated with check (
+    user_id = auth.uid() and public.is_ff_member() and char_length(coalesce(contact,'')) <= 200
+  );
+
+drop policy if exists "ff_contacts_update_own" on public.ff_chat_contacts;
+create policy "ff_contacts_update_own" on public.ff_chat_contacts
+  for update to authenticated using (user_id = auth.uid())
+  with check (user_id = auth.uid() and char_length(coalesce(contact,'')) <= 200);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'ff_chat_contacts'
+  ) then
+    alter publication supabase_realtime add table public.ff_chat_contacts;
+  end if;
+end $$;
+
 -- ── realtime CDC (idempotent add) ────────────────────────────────────────────
 do $$
 begin
@@ -184,12 +250,21 @@ create extension if not exists pg_cron;
 alter table public.ff_chat_messages alter column user_id drop not null;
 alter table public.ff_chat_messages add column if not exists bot boolean not null default false;
 
--- shared poster (SECURITY DEFINER so cron can insert past RLS)
+-- shared poster (SECURITY DEFINER so cron can insert past RLS). Waits for a
+-- LULL — skips posting if a real human has spoken in the last 2 hours, so the
+-- scheduled jokes don't interrupt an active conversation. (The /8ball command
+-- below inserts directly, bypassing this — an invoked reply should never wait.)
 create or replace function public.ff_post_bot(p_name text, p_body text, p_color text default '#6a1b9a')
-returns void language sql security definer set search_path = public as $$
+returns void language plpgsql security definer set search_path = public as $$
+declare last_human timestamptz;
+begin
+  select max(created_at) into last_human from public.ff_chat_messages where room = 'league' and bot = false;
+  if last_human is not null and now() - last_human < interval '2 hours' then
+    return;
+  end if;
   insert into public.ff_chat_messages (room, user_id, screen_name, body, color, bot)
   values ('league', null, p_name, p_body, coalesce(p_color, '#6a1b9a'), true);
-$$;
+end $$;
 revoke all on function public.ff_post_bot(text, text, text) from public;
 
 -- Matt Jackson — a poem about missing a testicle, EVERY OTHER day
