@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Signing you in…</title>
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🍆%3C/text%3E%3C/svg%3E">
+<style>
+  body{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:#008080; font-family:"Tahoma","MS Sans Serif",Geneva,sans-serif; font-size:12px; color:#000; padding:16px; }
+  .win{ width:340px; max-width:100%; background:#c0c0c0; border:2px solid; border-color:#fff #000 #000 #fff;
+    box-shadow:inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080; padding:2px; }
+  .titlebar{ height:22px; display:flex; align-items:center; padding:0 4px;
+    background:linear-gradient(90deg,#000080,#1084d0); color:#fff; font-weight:bold; }
+  .body{ padding:18px 18px 20px; text-align:center; }
+  .egg{ font-size:44px; line-height:1; margin-bottom:8px; }
+  h1{ font-size:14px; margin:0 0 8px; }
+  p{ margin:0 0 12px; color:#333; font-size:11.5px; line-height:1.5; }
+  .spinner{ width:26px; height:26px; margin:6px auto 12px; border:3px solid #9a9a9a; border-top-color:#000080;
+    border-radius:50%; animation:spin .8s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .btn{ display:flex; align-items:center; justify-content:center; gap:8px; width:100%; margin:8px 0 0;
+    padding:8px 12px; background:#c0c0c0; border:2px solid; border-color:#fff #000 #000 #fff;
+    box-shadow:inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080; font-family:inherit; font-size:12px; font-weight:bold; cursor:pointer; }
+  .btn:active{ border-color:#000 #fff #fff #000; }
+  .btn svg{ width:16px; height:16px; }
+  #recover{ display:none; }
+  .err{ color:#a10000; font-size:11px; min-height:14px; }
+  @media (prefers-reduced-motion:reduce){ .spinner{ animation:none; } }
+</style>
+</head>
+<body>
+  <div class="win">
+    <div class="titlebar">Sign On</div>
+    <div class="body">
+      <div id="loading">
+        <div class="spinner"></div>
+        <p>Signing you in…</p>
+      </div>
+      <div id="recover">
+        <div class="egg" aria-hidden="true">🍆</div>
+        <h1>That sign-in didn't go through</h1>
+        <p>Give it another shot with the account for your invited email.</p>
+        <button class="btn" id="rGoogle"><svg viewBox="0 0 18 18"><path d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.91c1.7-1.57 2.69-3.88 2.69-6.62z" fill="#4285F4"/><path d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.91-2.26c-.81.54-1.84.86-3.05.86-2.34 0-4.33-1.58-5.04-3.71H.96v2.33A9 9 0 0 0 9 18z" fill="#34A853"/><path d="M3.96 10.71A5.41 5.41 0 0 1 3.68 9c0-.6.1-1.18.28-1.71V4.96H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.04l3-2.33z" fill="#FBBC05"/><path d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.96l3 2.33C4.67 5.16 6.66 3.58 9 3.58z" fill="#EA4335"/></svg>Continue with Google</button>
+        <button class="btn" id="rMs"><svg viewBox="0 0 18 18"><rect x="1" y="1" width="7.6" height="7.6" fill="#F25022"/><rect x="9.4" y="1" width="7.6" height="7.6" fill="#7FBA00"/><rect x="1" y="9.4" width="7.6" height="7.6" fill="#00A4EF"/><rect x="9.4" y="9.4" width="7.6" height="7.6" fill="#FFB900"/></svg>Continue with Microsoft</button>
+        <p class="err" id="err"></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    const SUPABASE_URL = 'https://arpquyoucdsdmbetgftj.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_R18l5zBtRQ1CkSGNBkgZkg_dVVBldlb';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
+    });
+    const REDIR = location.origin + location.pathname;            // this callback's own URL
+    const CHAT  = location.origin + location.pathname.replace(/[^/]*$/, '');  // dir → index.html
+
+    function showRecover(msg){
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('recover').style.display = 'block';
+      if (msg) document.getElementById('err').textContent = msg;
+      document.getElementById('rGoogle').onclick = async () => {
+        const { error } = await supabase.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: REDIR } });
+        if (error) document.getElementById('err').textContent = error.message;
+      };
+      document.getElementById('rMs').onclick = async () => {
+        const { error } = await supabase.auth.signInWithOAuth({ provider:'azure', options:{ redirectTo: REDIR, scopes:'email' } });
+        if (error) document.getElementById('err').textContent = error.message;
+      };
+    }
+    function done(){
+      let back = CHAT;
+      try{ back = sessionStorage.getItem('auth-return-to') || CHAT; sessionStorage.removeItem('auth-return-to'); }catch(e){}
+      location.replace(back);
+    }
+
+    const qs = new URLSearchParams(location.search);
+    const hs = new URLSearchParams(location.hash.slice(1));
+    if (qs.get('error') || hs.get('error')) {
+      showRecover(decodeURIComponent((qs.get('error_description') || hs.get('error_description') || '').replace(/\+/g,' ')));
+    } else {
+      const session = await new Promise((resolve) => {
+        let d = false; const finish = (s) => { if(!d){ d = true; resolve(s); } };
+        supabase.auth.onAuthStateChange((_e, s) => { if (s) finish(s); });
+        supabase.auth.getSession().then(({ data:{ session:s } }) => { if (s) finish(s); });
+        setTimeout(() => finish(null), 6000);
+      });
+      if (session) { done(); }
+      else {
+        const code = qs.get('code');
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) showRecover(error.message); else done();
+        } else {
+          done();   // no flow in progress — just go to the room
+        }
+      }
+    }
+  </script>
+</body>
+</html>
