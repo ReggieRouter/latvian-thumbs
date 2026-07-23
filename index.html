@@ -169,6 +169,14 @@
   .share .btn .gi{ width:18px; height:18px; flex:0 0 18px; }
   .dismiss{ display:flex; justify-content:flex-end; margin-top:13px; }
 
+  /* ---- join requests (admin) ---- */
+  .reqRow{ display:flex; justify-content:space-between; align-items:center; gap:8px; padding:7px 9px; border-bottom:1px solid var(--sh); }
+  .reqRow:last-child{ border-bottom:0; }
+  .reqEmail{ font-weight:bold; font-size:12px; }
+  .reqNote{ color:#555; font-size:11px; margin-top:2px; }
+  .reqActions{ display:flex; gap:6px; flex:0 0 auto; }
+  .reqList{ max-height:50vh; overflow-y:auto; }
+
   /* ---- video call dialog ---- */
   .videoWin{ width:820px; max-width:96vw; }
   .videoWin .body{ padding:0; }
@@ -238,6 +246,7 @@
         <div class="sep"></div>
         <button class="btn" id="inviteBtn" style="min-width:0;padding:2px 10px;">Invite League…</button>
         <button class="btn" id="muteBtn" style="min-width:0;padding:2px 10px;" aria-pressed="false">🔊 Sound</button>
+        <button class="btn" id="reqAdminBtn" style="min-width:0;padding:2px 10px;font-weight:bold;" hidden>🔔 Requests</button>
       </div>
 
       <div class="inputrow">
@@ -297,12 +306,17 @@
       <div class="egg" aria-hidden="true"><svg class="tri" viewBox="0 0 100 94"><polygon points="50,5 95,89 5,89" fill="url(#aolTri)" stroke="#fff" stroke-width="5" stroke-linejoin="round"/></svg><span><svg viewBox="0 0 44 44" width="30" height="30" aria-hidden="true"><g transform="rotate(-42 22 22)"><ellipse cx="22" cy="22" rx="15" ry="9" fill="#fff" stroke="#0a37a0" stroke-width="1.6"/><line x1="12" y1="22" x2="32" y2="22" stroke="#0a37a0" stroke-width="1.6" stroke-linecap="round"/><line x1="17" y1="19" x2="17" y2="25" stroke="#0a37a0" stroke-width="1.3" stroke-linecap="round"/><line x1="21" y1="18.5" x2="21" y2="25.5" stroke="#0a37a0" stroke-width="1.3" stroke-linecap="round"/><line x1="25" y1="19" x2="25" y2="25" stroke="#0a37a0" stroke-width="1.3" stroke-linecap="round"/></g></svg></span></div>
       <h1>You're not on the league list yet</h1>
       <p>You're signed in as <b id="deniedEmail">—</b>, but that email isn't on the
-         roster. Ask the commissioner to add you, then sign in again on that same
-         address.</p>
+         roster. Send a request below and the commissioner can add you with one click.</p>
+      <div class="field" id="reqNoteWrap">
+        <label for="reqNote">Optional note to the commissioner:</label>
+        <div class="sunken"><input id="reqNote" maxlength="140" placeholder="e.g. I'm in the league, add me!" autocomplete="off"></div>
+      </div>
       <div class="oauth">
-        <a class="btn" id="askCommish" href="#" style="text-decoration:none;color:#000;font-weight:bold;padding:8px 12px;">✉️ Ask the commissioner</a>
+        <button class="btn" id="requestJoinBtn" style="font-weight:bold;padding:8px 12px;">📨 Request to Join</button>
+        <a class="btn" id="askCommish" href="#" style="text-decoration:none;color:#000;padding:8px 12px;">✉️ Or email the commissioner directly</a>
         <button class="btn" id="switchAcct" style="padding:8px 12px;">Use a different account</button>
       </div>
+      <p class="muted" id="reqMsg" style="min-height:14px;margin-top:8px;"></p>
     </div>
   </div>
 </div>
@@ -379,6 +393,17 @@
     <div class="body">
       <iframe class="videoFrame" id="videoFrame" allow="camera; microphone; fullscreen; display-capture; autoplay" title="Video call"></iframe>
       <div class="videoNote">Free group video via Jitsi — same room every time you click the button. Closing this window hangs up and releases your camera/mic.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= JOIN REQUESTS (admin only) ========================= -->
+<div class="modalwrap" id="requestsModal">
+  <div class="win raised" style="width:440px;max-width:100%;">
+    <div class="titlebar"><div class="t">🔔 Join Requests</div><button class="tbtn" id="closeRequests" aria-label="Close">✕</button></div>
+    <div class="body">
+      <div class="reqList sunken" id="requestsList"></div>
+      <div class="dismiss" style="padding:10px;"><button class="btn" id="okRequests" style="font-weight:bold;">Close</button></div>
     </div>
   </div>
 </div>
@@ -515,7 +540,7 @@
   // "People" menu — toggles the roster panel (useful on mobile, where it's hidden by default)
   (function peopleMenu(){
     var mnu=$('peopleMenu'); if(!mnu) return;
-    mnu.addEventListener('click', function(e){ e.stopPropagation();
+    mnu.addEventListener('click', function(e){ e.stopPropagation(); $('mlist').parentElement || null;
       document.querySelector('.members').classList.toggle('mobileShow'); });
   })();
 
@@ -574,6 +599,58 @@
     modal.addEventListener('click', function(e){ if(e.target===modal) closeVideo(); });
   })();
 
+  // Admin — "🔔 Requests" panel. Approve inserts the email straight into the
+  // allowlist (client-side, gated by the is_ff_admin() RLS policy — nobody else's
+  // browser can do this even if they call the same code) and marks the request
+  // approved; the requester just needs to sign in again to get in.
+  var IS_ADMIN = false;
+  async function refreshReqBadge(){
+    if(!IS_ADMIN) return;
+    var r = await supabase.from('ff_chat_join_requests').select('id', { count:'exact', head:true }).eq('status','pending');
+    var n = r && typeof r.count === 'number' ? r.count : 0;
+    $('reqAdminBtn').textContent = '🔔 Requests' + (n ? ' ('+n+')' : '');
+  }
+  (function adminRequests(){
+    var btn=$('reqAdminBtn'), modal=$('requestsModal'), list=$('requestsList'); if(!btn||!modal||!list) return;
+    async function loadRequests(){
+      list.innerHTML = '<p class="muted" style="padding:8px;">Loading…</p>';
+      var { data, error } = await supabase.from('ff_chat_join_requests')
+        .select('id,email,note,created_at').eq('status','pending').order('created_at',{ascending:true});
+      if(error){ list.innerHTML = '<p class="muted" style="padding:8px;color:#a10000;">'+esc(error.message)+'</p>'; return; }
+      if(!data || !data.length){ list.innerHTML = '<p class="muted" style="padding:8px;">No pending requests. 🎉</p>'; return; }
+      list.innerHTML = '';
+      data.forEach(function(r){
+        var row = document.createElement('div'); row.className='reqRow';
+        row.innerHTML = '<div><div class="reqEmail">'+esc(r.email)+'</div>'+(r.note?'<div class="reqNote">"'+esc(r.note)+'"</div>':'')+'</div>'+
+          '<div class="reqActions"><button class="btn" data-approve="'+r.id+'" style="min-width:0;padding:2px 8px;">Approve</button>'+
+          '<button class="btn" data-deny="'+r.id+'" style="min-width:0;padding:2px 8px;">Deny</button></div>';
+        list.appendChild(row);
+      });
+    }
+    btn.addEventListener('click', function(){ modal.classList.add('open'); loadRequests(); });
+    $('closeRequests').addEventListener('click', function(){ modal.classList.remove('open'); });
+    $('okRequests').addEventListener('click', function(){ modal.classList.remove('open'); });
+    modal.addEventListener('click', function(e){ if(e.target===modal) modal.classList.remove('open'); });
+    list.addEventListener('click', async function(e){
+      var t = e.target;
+      var appId = t.getAttribute && t.getAttribute('data-approve');
+      var denyId = t.getAttribute && t.getAttribute('data-deny');
+      if(appId){
+        t.disabled = true;
+        var got = await supabase.from('ff_chat_join_requests').select('email').eq('id',appId).single();
+        if(got && got.data){
+          await supabase.from('ff_chat_allowlist').insert({ email: got.data.email.toLowerCase(), label: got.data.email });
+          await supabase.from('ff_chat_join_requests').update({ status:'approved' }).eq('id', appId);
+        }
+        loadRequests(); refreshReqBadge();
+      } else if(denyId){
+        t.disabled = true;
+        await supabase.from('ff_chat_join_requests').update({ status:'denied' }).eq('id', denyId);
+        loadRequests(); refreshReqBadge();
+      }
+    });
+  })();
+
   // Window controls — minimize (collapse to titlebar), maximize (fill the window +
   // real browser Fullscreen API where supported), close (sign off, like real AOL).
   (function windowControls(){
@@ -629,12 +706,18 @@
     setTimeout(sndMail, 220);
     notifyLogin();
 
+    IS_ADMIN = !!(me.email && me.email.toLowerCase()==='stephengowa@gmail.com');
+    if(IS_ADMIN){ $('reqAdminBtn').hidden = false; refreshReqBadge(); }
+
     // realtime: messages + presence on one channel
     channel = supabase.channel('ff-room-'+ROOM, { config:{ presence:{ key: me.email } } });
     channel
       .on('postgres_changes',
         { event:'INSERT', schema:'public', table:'ff_chat_messages', filter:'room=eq.'+ROOM },
         function(payload){ var m=payload.new; addMsg(m.screen_name,m.color,m.body,m.bot); sndIM(); })
+      .on('postgres_changes',
+        { event:'INSERT', schema:'public', table:'ff_chat_join_requests' },
+        function(payload){ if(IS_ADMIN){ addHost('📨 New join request from '+payload.new.email); refreshReqBadge(); } })
       .on('presence', { event:'sync' }, function(){
         var state = channel.presenceState(); var keys = Object.keys(state);
         if(knownKeys === null){ knownKeys = {}; keys.forEach(function(k){ knownKeys[k]=1; }); }
@@ -728,6 +811,24 @@
     location.href = 'mailto:'+ADMIN+'?subject='+subj+'&body='+body;
   });
 
+  // "Request to Join" — in-app request queue, replaces having to email the
+  // commissioner and wait for a manual SQL edit. Email comes from the verified
+  // OAuth session (never a typed field), so it can't be spoofed.
+  $('requestJoinBtn').addEventListener('click', async function(){
+    var btn = this; btn.disabled = true;
+    var note = ($('reqNote').value || '').trim().slice(0,140);
+    var { error } = await supabase.from('ff_chat_join_requests').insert({ user_id: me.uid, email: me.email, note: note || null });
+    if(error){
+      if(/duplicate|unique/i.test(error.message)){
+        $('reqMsg').textContent = 'Already requested — sit tight, the commissioner will approve you soon.';
+        $('reqNoteWrap').style.display = 'none';
+      } else { btn.disabled = false; $('reqMsg').textContent = 'Could not send request: '+error.message; }
+    } else {
+      $('reqMsg').textContent = '✅ Request sent! You can sign in again once approved.';
+      $('reqNoteWrap').style.display = 'none';
+    }
+  });
+
   /* ---------- invite dialog ---------- */
   var modal = $('modal');
   $('joinlink').textContent = JOIN_URL;
@@ -768,7 +869,20 @@
     var ok = false;
     try{ var r = await supabase.rpc('is_ff_member'); ok = (r && !r.error && r.data === true); }
     catch(e){ ok = false; }
-    if(!ok){ $('deniedEmail').textContent = me.email || '(unknown email)'; show('gateDenied'); return; }
+    if(!ok){
+      $('deniedEmail').textContent = me.email || '(unknown email)';
+      show('gateDenied');
+      try{
+        var rq = await supabase.from('ff_chat_join_requests').select('status')
+          .eq('user_id', me.uid).order('created_at',{ascending:false}).limit(1).maybeSingle();
+        if(rq && rq.data && rq.data.status==='pending'){
+          $('reqMsg').textContent = 'Request already sent — sit tight, the commissioner will approve you soon.';
+          $('requestJoinBtn').disabled = true;
+          $('reqNoteWrap').style.display = 'none';
+        }
+      }catch(e){}
+      return;
+    }
     // Already locked in a screen name? Go straight into the room with it.
     var prof = null;
     try{
