@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Latvian Thumbs</title>
 
 <!-- Deliberately NOT LendPaper-branded: founder directive — this chat is kept
      totally separate from LendPaper, no shared identity. Eggplant favicon. -->
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🍆%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏈%3C/text%3E%3C/svg%3E">
 
 <!-- Open Graph / Twitter — no LendPaper identity -->
 <meta property="og:title" content="Latvian Thumbs" />
@@ -21,12 +21,14 @@
     --title1:#000080; --title2:#1084d0; --paper:#ffffff; --sel:#000080;
     --font:"Tahoma","MS Sans Serif","Geneva",system-ui,sans-serif;
   }
-  *{ box-sizing:border-box; }
-  html,body{ height:100%; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ min-height:100%; }
   body{
     margin:0; font-family:var(--font); font-size:12px; color:#000;
     background:#008080; display:flex; align-items:center; justify-content:center;
-    padding:18px; -webkit-font-smoothing:none;
+    min-height:100dvh; overflow-y:auto; -webkit-font-smoothing:none;
+    padding:max(18px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right))
+            max(18px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));
   }
   button{ font-family:var(--font); font-size:12px; }
   a{ color:#0000c8; }
@@ -53,8 +55,13 @@
   .titlebar .t{ flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:1px 1px 0 rgba(0,0,0,.35); }
   .tbtn{ width:17px; height:15px; display:grid; place-items:center; font-size:10px; font-weight:bold; line-height:1;
     background:var(--face); border:2px solid; border-color:var(--hi) var(--dk) var(--dk) var(--hi);
-    box-shadow:inset 1px 1px 0 var(--face-lite), inset -1px -1px 0 var(--sh); color:#000; cursor:default; }
-  .menubar{ display:flex; gap:2px; padding:2px 4px; }
+    box-shadow:inset 1px 1px 0 var(--face-lite), inset -1px -1px 0 var(--sh); color:#000; cursor:pointer; }
+  .tbtn:active{ border-color:var(--dk) var(--hi) var(--hi) var(--dk);
+    box-shadow:inset 1px 1px 0 var(--sh), inset -1px -1px 0 var(--face-lite); }
+  #chatWin.minimized .body,#chatWin.minimized .toolbar,#chatWin.minimized .inputrow,#chatWin.minimized .roomtitle{ display:none; }
+  #chatWin.maximized{ width:100%; }
+  #chatWin.maximized .log{ height:56vh; }
+  .menubar{ display:flex; gap:2px; padding:2px 4px; flex-wrap:wrap; }
   .menubar span{ padding:2px 7px; }
   .menubar span u{ text-decoration:underline; }
   .menubar span:hover{ background:var(--sel); color:#fff; }
@@ -92,13 +99,23 @@
   .mcount{ padding:3px 4px; border-top:1px solid var(--sh); color:#333; }
 
   /* ---- format toolbar ---- */
-  .toolbar{ display:flex; align-items:center; gap:3px; padding:3px 4px; flex-wrap:wrap; }
-  .tool{ width:23px; height:22px; display:grid; place-items:center; cursor:default;
+  .toolbar{ display:flex; align-items:center; gap:3px; padding:3px 4px; flex-wrap:wrap; position:relative; }
+  .tool{ width:23px; height:22px; display:grid; place-items:center; cursor:pointer; position:relative;
     background:var(--face); border:2px solid; border-color:var(--hi) var(--dk) var(--dk) var(--hi);
     box-shadow:inset 1px 1px 0 var(--face-lite), inset -1px -1px 0 var(--sh); }
+  .tool:active{ border-color:var(--dk) var(--hi) var(--hi) var(--dk);
+    box-shadow:inset 1px 1px 0 var(--sh), inset -1px -1px 0 var(--face-lite); }
+  .tool[aria-pressed=true]{ border-color:var(--dk) var(--hi) var(--hi) var(--dk);
+    box-shadow:inset 1px 1px 0 var(--sh), inset -1px -1px 0 var(--face-lite); }
   .tool.b{ font-weight:bold; } .tool.i{ font-style:italic; font-family:Georgia,serif; } .tool.u{ text-decoration:underline; }
   .swatch{ width:15px; height:15px; border:1px solid #000; }
   .sep{ width:2px; height:20px; margin:0 3px; border-left:1px solid var(--sh); border-right:1px solid var(--hi); }
+  .emojiDrop{ position:absolute; top:100%; left:0; z-index:30; display:grid; grid-template-columns:repeat(6,1fr); gap:2px;
+    background:var(--face); border:2px solid; border-color:var(--hi) var(--dk) var(--dk) var(--hi);
+    box-shadow:inset 1px 1px 0 var(--face-lite), inset -1px -1px 0 var(--sh), 2px 2px 4px rgba(0,0,0,.3); padding:4px; }
+  .emojiDrop[hidden]{ display:none; }
+  .emojiDrop .em{ width:26px; height:26px; display:grid; place-items:center; font-size:16px; cursor:pointer; }
+  .emojiDrop .em:hover{ background:var(--sel); }
 
   /* ---- input row ---- */
   .inputrow{ display:flex; gap:5px; padding:0 4px 5px; align-items:stretch; }
@@ -108,9 +125,10 @@
   .send{ min-width:74px; font-weight:bold; }
 
   .statusbar{ display:flex; gap:4px; padding:2px; align-items:stretch; }
-  .statusbar .cell{ padding:2px 7px; font-size:11px; color:#333;
+  .statusbar .cell{ padding:2px 7px; font-size:11px; color:#333; min-width:0;
     border:1px solid; border-color:var(--sh) var(--hi) var(--hi) var(--sh); display:flex; align-items:center; }
-  .statusbar .cell.grow{ flex:1; }
+  .statusbar .cell.grow{ flex:1; min-width:0; }
+  .statusbar #whoami{ max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .statusbar a{ color:#0000a0; }
 
   /* ---- gate screens (sign-in / not-member / pick-name) ---- */
@@ -151,8 +169,25 @@
   .share .btn .gi{ width:18px; height:18px; flex:0 0 18px; }
   .dismiss{ display:flex; justify-content:flex-end; margin-top:13px; }
 
+  /* ---- video call dialog ---- */
+  .videoWin{ width:820px; max-width:96vw; }
+  .videoWin .body{ padding:0; }
+  .videoFrame{ width:100%; height:62vh; border:0; display:block; background:#111; }
+  .videoNote{ padding:6px 10px; font-size:11px; color:#333; background:var(--face); border-top:1px solid var(--sh); }
+
   @media (max-width:640px){
-    .members{ display:none; } .win{ width:100%; } .log{ height:46vh; }
+    .members{ display:none; }
+    .members.mobileShow{ display:flex; position:fixed; inset:auto 10px 10px 10px; z-index:35; max-height:60vh; }
+    .win{ width:100%; }
+    .log{ height:46vh; }
+    #chatWin.maximized .log{ height:60vh; }
+    /* iOS Safari zooms the page on any input with font-size under 16px on focus — keep these at 16px on touch screens */
+    .inputrow input[type=text], .field input{ font-size:16px; }
+    .tool{ width:34px; height:32px; }
+    .oauth .btn{ padding:11px 12px; }
+    .colorpick button{ width:28px; height:28px; }
+    .menubar .mi{ padding:8px 20px 8px 12px; }
+    .share{ grid-template-columns:1fr; }
   }
   @media (prefers-reduced-motion:reduce){ *{ animation:none!important; } }
 </style>
@@ -171,12 +206,12 @@
   <div class="titlebar">
     <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h11l7-7V3H3z" fill="#ffd54a" stroke="#000" stroke-width="1.5"/><path d="M14 21v-7h7" fill="none" stroke="#000" stroke-width="1.5"/></svg>
     <div class="t" id="winTitle">Latvian Thumbs</div>
-    <div class="tbtn" aria-hidden="true">_</div>
-    <div class="tbtn" aria-hidden="true">▢</div>
-    <div class="tbtn" aria-hidden="true">✕</div>
+    <div class="tbtn" id="winMin" title="Minimize">_</div>
+    <div class="tbtn" id="winMax" title="Maximize">▢</div>
+    <div class="tbtn" id="winClose" title="Sign off">✕</div>
   </div>
   <div class="menubar">
-    <span aria-hidden="true"><u>F</u>ile</span><span aria-hidden="true"><u>E</u>dit</span><span class="hasmenu" id="insertMenu"><u>I</u>nsert<div class="dropdown" id="insertDrop" hidden><div class="mi" data-emoji="🍆">Dicks</div><div class="mi" data-emoji="🧸">Toys</div><div class="mi" data-emoji="🥒">Cucumbers</div></div></span><span aria-hidden="true"><u>P</u>eople</span><span aria-hidden="true"><u>H</u>elp</span>
+    <span class="hasmenu" id="fileMenu"><u>F</u>ile<div class="dropdown" id="fileDrop" hidden><div class="mi" id="pedoItem">pedo</div></div></span><span class="hasmenu" id="editMenu"><u>E</u>dit<div class="dropdown" id="editDrop" hidden><div class="mi" id="clearViewItem">Clear View</div></div></span><span class="hasmenu" id="insertMenu"><u>I</u>nsert<div class="dropdown" id="insertDrop" hidden><div class="mi" data-emoji="🍆">Dicks</div><div class="mi" data-emoji="🧸">Toys</div><div class="mi" data-emoji="🥒">Cucumbers</div></div></span><span class="hasmenu" id="peopleMenu"><u>P</u>eople</span><span class="hasmenu" id="helpMenu"><u>H</u>elp</span>
   </div>
 
   <div class="body">
@@ -185,15 +220,21 @@
       <div class="log sunken" id="log" aria-live="polite" aria-label="Chat messages"></div>
 
       <div class="toolbar raised" role="toolbar" aria-label="Formatting">
-        <div class="tool b" title="Bold">B</div>
-        <div class="tool i" title="Italic">I</div>
-        <div class="tool u" title="Underline">U</div>
+        <div class="tool b" id="toolBold" title="Bold selected text">B</div>
+        <div class="tool i" id="toolItalic" title="Italicize selected text">I</div>
+        <div class="tool u" id="toolUnderline" title="Underline selected text">U</div>
         <div class="sep"></div>
-        <div class="tool" title="Your text color"><span class="swatch" id="mySwatch" style="background:#00007b"></span></div>
+        <div class="tool" id="toolColor" title="Your locked-in color"><span class="swatch" id="mySwatch" style="background:#00007b"></span></div>
         <div class="sep"></div>
-        <div class="tool" title="Smiley">
+        <div class="tool" id="toolSmiley" title="Smiley">
           <svg viewBox="0 0 20 20" width="18" height="18"><circle cx="10" cy="10" r="9" fill="#ffd83b" stroke="#c99700"/><circle cx="7" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/><path d="M5.5 12c1.5 2.4 7.5 2.4 9 0" fill="none" stroke="#000" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <div class="emojiDrop" id="emojiDrop" hidden></div>
         </div>
+        <div class="sep"></div>
+        <button class="btn" id="videoBtn" style="min-width:0;padding:3px 12px;font-weight:bold;display:flex;align-items:center;gap:6px;">
+          <svg width="16" height="14" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="14" height="12" rx="2" fill="#fff" stroke="#000" stroke-width="1.4"/><path d="M16 10l6-3v10l-6-3z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/><circle cx="9" cy="12" r="2.3" fill="#d32f2f"/></svg>
+          Video Call
+        </button>
         <div class="sep"></div>
         <button class="btn" id="inviteBtn" style="min-width:0;padding:2px 10px;">Invite League…</button>
         <button class="btn" id="muteBtn" style="min-width:0;padding:2px 10px;" aria-pressed="false">🔊 Sound</button>
@@ -223,10 +264,10 @@
 <!-- ========================= GATE: SIGN IN ========================= -->
 <div class="gate" id="gateSignin" hidden>
   <div class="win raised card">
-    <div class="titlebar"><div class="t">Sign On — Invite Only</div><div class="tbtn">✕</div></div>
+    <div class="titlebar"><div class="t">Latvian fingers fantasy league</div><div class="tbtn">✕</div></div>
     <div class="body">
-      <div class="egg" aria-hidden="true"><svg class="tri" viewBox="0 0 100 94"><polygon points="50,5 95,89 5,89" fill="url(#aolTri)" stroke="#fff" stroke-width="5" stroke-linejoin="round"/></svg><span>🍆</span></div>
-      <h1>Welcome to the League Lobby</h1>
+      <div class="egg" aria-hidden="true"><svg class="tri" viewBox="0 0 100 94"><polygon points="50,5 95,89 5,89" fill="url(#aolTri)" stroke="#fff" stroke-width="5" stroke-linejoin="round"/></svg><span><svg viewBox="0 0 44 44" width="30" height="30" aria-hidden="true"><g transform="rotate(-42 22 22)"><ellipse cx="22" cy="22" rx="15" ry="9" fill="#fff" stroke="#0a37a0" stroke-width="1.6"/><line x1="12" y1="22" x2="32" y2="22" stroke="#0a37a0" stroke-width="1.6" stroke-linecap="round"/><line x1="17" y1="19" x2="17" y2="25" stroke="#0a37a0" stroke-width="1.3" stroke-linecap="round"/><line x1="21" y1="18.5" x2="21" y2="25.5" stroke="#0a37a0" stroke-width="1.3" stroke-linecap="round"/><line x1="25" y1="19" x2="25" y2="25" stroke="#0a37a0" stroke-width="1.3" stroke-linecap="round"/></g></svg></span></div>
+      <h1>Welcome to Fantasy Football</h1>
       <p>This room is <b>invite-only</b>. Sign in with the Google or Microsoft
          account for the email you were invited on — that's it, no password to make.</p>
       <div class="warn" id="webviewWarn" hidden>
@@ -253,7 +294,7 @@
   <div class="win raised card">
     <div class="titlebar"><div class="t">Not on the List</div><div class="tbtn">✕</div></div>
     <div class="body">
-      <div class="egg" aria-hidden="true"><svg class="tri" viewBox="0 0 100 94"><polygon points="50,5 95,89 5,89" fill="url(#aolTri)" stroke="#fff" stroke-width="5" stroke-linejoin="round"/></svg><span>🍆</span></div>
+      <div class="egg" aria-hidden="true"><svg class="tri" viewBox="0 0 100 94"><polygon points="50,5 95,89 5,89" fill="url(#aolTri)" stroke="#fff" stroke-width="5" stroke-linejoin="round"/></svg><span><svg viewBox="0 0 44 44" width="30" height="30" aria-hidden="true"><g transform="rotate(-42 22 22)"><ellipse cx="22" cy="22" rx="15" ry="9" fill="#fff" stroke="#0a37a0" stroke-width="1.6"/><line x1="12" y1="22" x2="32" y2="22" stroke="#0a37a0" stroke-width="1.6" stroke-linecap="round"/><line x1="17" y1="19" x2="17" y2="25" stroke="#0a37a0" stroke-width="1.3" stroke-linecap="round"/><line x1="21" y1="18.5" x2="21" y2="25.5" stroke="#0a37a0" stroke-width="1.3" stroke-linecap="round"/><line x1="25" y1="19" x2="25" y2="25" stroke="#0a37a0" stroke-width="1.3" stroke-linecap="round"/></g></svg></span></div>
       <h1>You're not on the league list yet</h1>
       <p>You're signed in as <b id="deniedEmail">—</b>, but that email isn't on the
          roster. Ask the commissioner to add you, then sign in again on that same
@@ -271,7 +312,7 @@
   <div class="win raised card">
     <div class="titlebar"><div class="t">Almost In…</div><div class="tbtn">✕</div></div>
     <div class="body">
-      <div class="egg" aria-hidden="true"><svg class="tri" viewBox="0 0 100 94"><polygon points="50,5 95,89 5,89" fill="url(#aolTri)" stroke="#fff" stroke-width="5" stroke-linejoin="round"/></svg><span>🍆</span></div>
+      <div class="egg" aria-hidden="true"><svg class="tri" viewBox="0 0 100 94"><polygon points="50,5 95,89 5,89" fill="url(#aolTri)" stroke="#fff" stroke-width="5" stroke-linejoin="round"/></svg><span><svg viewBox="0 0 44 44" width="30" height="30" aria-hidden="true"><g transform="rotate(-42 22 22)"><ellipse cx="22" cy="22" rx="15" ry="9" fill="#fff" stroke="#0a37a0" stroke-width="1.6"/><line x1="12" y1="22" x2="32" y2="22" stroke="#0a37a0" stroke-width="1.6" stroke-linecap="round"/><line x1="17" y1="19" x2="17" y2="25" stroke="#0a37a0" stroke-width="1.3" stroke-linecap="round"/><line x1="21" y1="18.5" x2="21" y2="25.5" stroke="#0a37a0" stroke-width="1.3" stroke-linecap="round"/><line x1="25" y1="19" x2="25" y2="25" stroke="#0a37a0" stroke-width="1.3" stroke-linecap="round"/></g></svg></span></div>
       <h1>Pick your screen name</h1>
       <p>This is what the league sees. <b>You only get to pick once</b> — choose
          wisely, it's locked in after this. Pick a color too.</p>
@@ -308,6 +349,36 @@
         <button class="btn" id="copyText"><svg class="gi" viewBox="0 0 24 24"><rect x="7" y="4" width="12" height="15" rx="1.5" fill="#fff" stroke="#666"/><rect x="5" y="6" width="12" height="15" rx="1.5" fill="#eee" stroke="#666"/></svg>Copy invite text</button>
       </div>
       <div class="dismiss"><button class="btn" id="okInvite" style="font-weight:bold;">Done</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= ABOUT DIALOG (Help menu) ========================= -->
+<div class="modalwrap" id="aboutModal">
+  <div class="win raised" style="width:380px;max-width:100%;">
+    <div class="titlebar"><div class="t">About Latvian Thumbs</div><button class="tbtn" id="closeAbout" aria-label="Close">✕</button></div>
+    <div class="body" style="padding:14px 16px 16px;font-size:11.5px;line-height:1.6;">
+      <p style="margin:0 0 8px;"><b>🏈 Latvian Thumbs</b> — the league lobby, AOL circa 1998.</p>
+      <ul style="margin:0 0 10px;padding-left:18px;">
+        <li>Your screen name and color are locked in <b>the first time</b> you pick them — choose wisely.</li>
+        <li><b>File → pedo</b> emails Matt. You know why.</li>
+        <li><b>Insert</b> drops a little something into your message.</li>
+        <li><b>Edit → Clear View</b> wipes your own screen only — nobody else's.</li>
+        <li><b>People</b> toggles the roster panel.</li>
+        <li>🔊 Sound toggles the door chimes — muting is judgment-free.</li>
+      </ul>
+      <div class="dismiss"><button class="btn" id="okAbout" style="font-weight:bold;">Got it</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= VIDEO CALL (Jitsi, free) ========================= -->
+<div class="modalwrap" id="videoModal">
+  <div class="win raised videoWin">
+    <div class="titlebar"><div class="t">📹 Video Call — Latvian Thumbs</div><button class="tbtn" id="closeVideo" aria-label="Close">✕</button></div>
+    <div class="body">
+      <iframe class="videoFrame" id="videoFrame" allow="camera; microphone; fullscreen; display-capture; autoplay" title="Video call"></iframe>
+      <div class="videoNote">Free group video via Jitsi — same room every time you click the button. Closing this window hangs up and releases your camera/mic.</div>
     </div>
   </div>
 </div>
@@ -352,15 +423,27 @@
   function sndOpen(){ tone(392,0,0.12,'triangle',.13); tone(587,0.10,0.16,'triangle',.13); }
   function sndClose(){ tone(494,0,0.12,'triangle',.12); tone(330,0.10,0.16,'triangle',.12); }
   function sndIM(){ tone(880,0,0.06,'sine',.10); tone(1175,0.07,0.09,'sine',.10); }
+  // Can't play the actual licensed "You've Got Mail!" voice clip (copyrighted audio) —
+  // this is an original bright ascending chime in the same spirit, played on login.
+  function sndMail(){ tone(523,0,0.10,'square',.09); tone(659,0.09,0.10,'square',.09);
+    tone(784,0.18,0.10,'square',.09); tone(1047,0.27,0.24,'square',.12); }
 
   /* ---------- rendering ---------- */
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  // Applied AFTER escaping, so this only ever wraps already-safe text in known tags —
+  // never introduces user-controlled markup. **bold**, __underline__, _italic_.
+  function formatText(escaped){
+    return escaped
+      .replace(/\*\*([^\*\n]+?)\*\*/g, '<b>$1</b>')
+      .replace(/__([^_\n]+?)__/g, '<u>$1</u>')
+      .replace(/_([^_\n]+?)_/g, '<i>$1</i>');
+  }
   var log = $('log');
   function atBottom(){ return log.scrollTop + log.clientHeight >= log.scrollHeight - 30; }
   function scroll(){ log.scrollTop = log.scrollHeight; }
   function addMsg(name,color,text,isBot){ var stick=atBottom(); var d=document.createElement('div'); d.className='msg';
     var tag = isBot ? '<span class="botTag">BOT</span> ' : '';
-    d.innerHTML=tag+'<span class="sn" style="color:'+esc(color||'#00007b')+'">'+esc(name)+':</span> <span class="tx">'+esc(text)+'</span>';
+    d.innerHTML=tag+'<span class="sn" style="color:'+esc(color||'#00007b')+'">'+esc(name)+':</span> <span class="tx">'+formatText(esc(text))+'</span>';
     log.appendChild(d); if(stick) scroll(); }
   function addHost(text){ var stick=atBottom(); var d=document.createElement('div'); d.className='msg host';
     d.innerHTML='OnlineHost:&nbsp; <span class="txt">'+esc(text)+'</span>'; log.appendChild(d); if(stick) scroll(); }
@@ -410,6 +493,122 @@
     document.addEventListener('click', function(){ drop.hidden=true; });
   })();
 
+  // "File" menu — one item, drafts an email in the user's default mail app
+  (function fileMenu(){
+    var mnu=$('fileMenu'), drop=$('fileDrop'); if(!mnu||!drop) return;
+    mnu.addEventListener('click', function(e){ e.stopPropagation(); drop.hidden=!drop.hidden; });
+    $('pedoItem').addEventListener('click', function(e){ e.stopPropagation(); drop.hidden=true;
+      location.href = 'mailto:matthewaaronjackson@gmail.com?body=' + encodeURIComponent('Are you a pedo?');
+    });
+    document.addEventListener('click', function(){ drop.hidden=true; });
+  })();
+
+  // "Edit" menu — Clear View wipes the LOCAL log only (nobody else's, nothing in the DB)
+  (function editMenu(){
+    var mnu=$('editMenu'), drop=$('editDrop'); if(!mnu||!drop) return;
+    mnu.addEventListener('click', function(e){ e.stopPropagation(); drop.hidden=!drop.hidden; });
+    $('clearViewItem').addEventListener('click', function(e){ e.stopPropagation(); drop.hidden=true;
+      log.innerHTML=''; addHost('*** view cleared (local only — history still loads on reload) ***'); });
+    document.addEventListener('click', function(){ drop.hidden=true; });
+  })();
+
+  // "People" menu — toggles the roster panel (useful on mobile, where it's hidden by default)
+  (function peopleMenu(){
+    var mnu=$('peopleMenu'); if(!mnu) return;
+    mnu.addEventListener('click', function(e){ e.stopPropagation();
+      document.querySelector('.members').classList.toggle('mobileShow'); });
+  })();
+
+  // "Help" menu — About dialog
+  (function helpMenu(){
+    var mnu=$('helpMenu'), about=$('aboutModal'); if(!mnu||!about) return;
+    mnu.addEventListener('click', function(e){ e.stopPropagation(); about.classList.add('open'); });
+    $('closeAbout').addEventListener('click', function(){ about.classList.remove('open'); });
+    $('okAbout').addEventListener('click', function(){ about.classList.remove('open'); });
+    about.addEventListener('click', function(e){ if(e.target===about) about.classList.remove('open'); });
+  })();
+
+  // B / I / U — wrap the selected text in the input with markdown-ish markers;
+  // addMsg() renders **bold**, __underline__, _italic_ back out as real formatting.
+  function wrapSelection(before, after){
+    var s = input.selectionStart||0, e = input.selectionEnd||0;
+    var v = input.value, sel = v.slice(s,e) || 'text';
+    input.value = v.slice(0,s) + before + sel + after + v.slice(e);
+    input.focus();
+    input.setSelectionRange(s+before.length, s+before.length+sel.length);
+  }
+  $('toolBold').addEventListener('click', function(){ wrapSelection('**','**'); });
+  $('toolItalic').addEventListener('click', function(){ wrapSelection('_','_'); });
+  $('toolUnderline').addEventListener('click', function(){ wrapSelection('__','__'); });
+
+  // color swatch tool — your color locked in at sign-up; clicking just confirms it
+  $('toolColor').addEventListener('click', function(){
+    var old = $('status').textContent;
+    $('status').textContent = 'Your color is locked in — that\'s it, no changing it now.';
+    setTimeout(function(){ $('status').textContent = old; }, 2200);
+  });
+
+  // Smiley — a real emoji picker dropdown, same pattern as Insert
+  (function smileyMenu(){
+    var EMO = ['😀','😂','😭','😡','🥶','🥵','🤔','🙄','😏','🫡','💀','🔥','🏈','🍆','🥚','👀'];
+    var tool=$('toolSmiley'), drop=$('emojiDrop'); if(!tool||!drop) return;
+    drop.innerHTML = EMO.map(function(e){ return '<div class="em">'+e+'</div>'; }).join('');
+    tool.addEventListener('click', function(e){ e.stopPropagation(); drop.hidden=!drop.hidden; });
+    drop.addEventListener('click', function(e){
+      var em=e.target.closest('.em'); if(!em) return; e.stopPropagation();
+      input.value += em.textContent; input.focus(); drop.hidden=true;
+    });
+    document.addEventListener('click', function(){ drop.hidden=true; });
+  })();
+
+  // Video call — free Jitsi Meet, same room every time. Public server (not tied to
+  // the allowlist) so treat the link like any shareable video link; iframe src is
+  // only set while the modal is open so the camera/mic release on close.
+  (function videoCall(){
+    var VIDEO_ROOM = 'LatvianThumbs-' + ROOM + '-9f2k7Xz';
+    var VIDEO_URL = 'https://meet.jit.si/' + encodeURIComponent(VIDEO_ROOM);
+    var modal=$('videoModal'), frame=$('videoFrame'); if(!modal||!frame) return;
+    $('videoBtn').addEventListener('click', function(){ frame.src = VIDEO_URL; modal.classList.add('open'); });
+    function closeVideo(){ modal.classList.remove('open'); frame.src = 'about:blank'; }
+    $('closeVideo').addEventListener('click', closeVideo);
+    modal.addEventListener('click', function(e){ if(e.target===modal) closeVideo(); });
+  })();
+
+  // Window controls — minimize (collapse to titlebar), maximize (fill the window +
+  // real browser Fullscreen API where supported), close (sign off, like real AOL).
+  (function windowControls(){
+    var win=$('chatWin');
+    $('winMin').addEventListener('click', function(){ win.classList.toggle('minimized'); });
+    $('winMax').addEventListener('click', function(){
+      win.classList.toggle('maximized');
+      var goingFull = win.classList.contains('maximized');
+      try{
+        if(goingFull && document.documentElement.requestFullscreen){ document.documentElement.requestFullscreen().catch(function(){}); }
+        else if(!goingFull && document.exitFullscreen && document.fullscreenElement){ document.exitFullscreen().catch(function(){}); }
+      }catch(e){}
+    });
+    $('winClose').addEventListener('click', async function(){
+      try{ if(channel) await supabase.removeChannel(channel); }catch(_){}
+      await signOut();
+    });
+  })();
+
+  // Login-alert emails to the whole league, via a Google Apps Script webhook (your
+  // own Gmail, free, no domain). Fire-and-forget — never blocks the UI, and quietly
+  // no-ops until NOTIFY_URL is configured. The Apps Script enforces its own cooldown
+  // per person so opening the tab repeatedly doesn't spam everyone's inbox.
+  var NOTIFY_URL = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+  var NOTIFY_SECRET = 'latvian-thumbs-9f2';
+  function notifyLogin(){
+    if(!NOTIFY_URL || NOTIFY_URL.indexOf('PASTE_')===0) return;
+    try{
+      fetch(NOTIFY_URL, {
+        method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({ secret:NOTIFY_SECRET, name:me.name||me.email, email:me.email, room:ROOM, url:JOIN_URL })
+      });
+    }catch(e){ /* best-effort — never block entering the room */ }
+  }
+
   /* ---------- enter the room ---------- */
   async function enterRoom(){
     show(null);
@@ -427,6 +626,8 @@
     else { (data||[]).forEach(function(m){ addMsg(m.screen_name,m.color,m.body,m.bot); }); scroll(); }
     addHost('*** You have entered the room "'+ (ROOM==='league'?'Latvian Thumbs':ROOM) +'" ***');
     sndOpen();
+    setTimeout(sndMail, 220);
+    notifyLogin();
 
     // realtime: messages + presence on one channel
     channel = supabase.channel('ff-room-'+ROOM, { config:{ presence:{ key: me.email } } });
