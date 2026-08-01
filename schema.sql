@@ -368,3 +368,20 @@ on conflict (email) do nothing;
 
 -- verify: select count(*) from public.ff_chat_messages;
 --         select email, label from public.ff_chat_allowlist order by added_at;
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- LEN-1453: reactive bots + AOL ad rail
+-- The tables/functions below are applied via the Supabase migrations
+-- ff_chat_reactive_bots and ff_chat_announcements. Recorded here so this file
+-- stays the readable source of truth for the whole schema.
+--
+--   ff_chat_presence      — heartbeat so the edge fn can see who's in the room
+--   ff_presence_ping()    — client writes its own row (SECURITY DEFINER)
+--   ff_live_humans()      — count of heartbeats inside the last 2 minutes
+--   ff_bot_spend          — per-month token/USD ledger for the $10 cap
+--   ff_bot_state          — nag throttles + last-reply time (single row)
+--   ff_bot_status()       — {capped, usd_spent, usd_cap, live_humans} for the client
+--   ff_chat_announcements — commissioner bulletins shown as AOL ad cards
+--
+-- Bots go quiet when 2+ people are actually in the room, and when the month's
+-- $10 is gone. Both cases post a Venmo nag; the cap also raises a banner.

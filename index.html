@@ -104,6 +104,43 @@
   .mrow .run{ width:13px; height:15px; flex:0 0 13px; }
   .mcount{ padding:3px 4px; border-top:1px solid var(--sh); color:#333; }
 
+  /* ---- AOL ad rail ----
+     Period house-ad look: hard borders, saturated fills, centered ALL-CAPS
+     display type, a visible "advertisement" hairline. Deliberately garish —
+     that's the joke. The member list shrinks so the rail always has room. */
+  .adrail{ flex:0 0 auto; border-top:2px solid var(--sh); padding:5px 4px 4px;
+    display:flex; flex-direction:column; gap:5px; overflow:hidden; }
+  .adcard{ border:2px solid; border-color:var(--hi) var(--dk) var(--dk) var(--hi);
+    cursor:default; overflow:hidden; position:relative; animation:adIn .35s ease-out; }
+  .adcard.clickable{ cursor:pointer; }
+  .adcard.clickable:hover{ outline:2px solid var(--title2); outline-offset:-2px; }
+  .adLabel{ font-size:8px; letter-spacing:.9px; text-transform:uppercase; color:#666;
+    text-align:center; padding:1px 0 2px; }
+  .adBody{ padding:7px 6px 8px; text-align:center; }
+  .adKicker{ font-size:8.5px; letter-spacing:1.1px; text-transform:uppercase;
+    font-weight:bold; opacity:.85; margin-bottom:3px; }
+  .adHead{ font-size:15px; line-height:1.05; font-weight:bold; letter-spacing:-.3px;
+    margin-bottom:4px; text-shadow:1px 1px 0 rgba(0,0,0,.18); }
+  .adSub{ font-size:10px; line-height:1.35; }
+  .adCta{ display:inline-block; margin-top:6px; font-size:9.5px; font-weight:bold;
+    text-transform:uppercase; letter-spacing:.6px; padding:3px 9px;
+    border:1px solid rgba(0,0,0,.45); box-shadow:1px 1px 0 rgba(0,0,0,.3); }
+  /* Three period palettes, cycled so consecutive ads never match */
+  .adcard.t0 .adBody{ background:linear-gradient(#2b2f9e,#1b1f6e); color:#fff; }
+  .adcard.t0 .adHead{ color:#ffd400; }
+  .adcard.t0 .adCta{ background:#ffd400; color:#242a86; }
+  .adcard.t1 .adBody{ background:#ffcf1a; color:#3a2c00; }
+  .adcard.t1 .adHead{ color:#c1121f; }
+  .adcard.t1 .adCta{ background:#c1121f; color:#fff; }
+  .adcard.t2 .adBody{ background:#f2f2f2; color:#111; }
+  .adcard.t2 .adHead{ color:#12507a; }
+  .adcard.t2 .adCta{ background:#12507a; color:#fff; }
+  /* Slide only — never animate opacity here. A backgrounded tab throttles the
+     animation, and a card that stalls on an opacity:0 start frame is an ad you
+     can't read. Transform can stall harmlessly; opacity cannot. */
+  @keyframes adIn{ from{ transform:translateY(5px);} to{ transform:none;} }
+  @media (prefers-reduced-motion: reduce){ .adcard{ animation:none; } }
+
   /* ---- format toolbar ---- */
   .toolbar{ display:flex; align-items:center; gap:3px; padding:3px 4px; flex-wrap:wrap; position:relative; }
   .tool{ width:23px; height:22px; display:grid; place-items:center; cursor:pointer; position:relative;
@@ -168,6 +205,12 @@
   .colorpick button{ width:22px; height:22px; border:2px solid var(--face); cursor:pointer; padding:0; }
   .colorpick button[aria-pressed=true]{ border-color:#000; }
   .warn{ background:#fffbcc; border:1px solid #b59f00; padding:7px 9px; font-size:11px; margin:0 8px 12px; text-align:left; }
+
+  /* ---- bot budget banner (shown only once the month's cap is spent) ---- */
+  .botBanner{ display:flex; align-items:center; gap:7px; padding:5px 9px; font-size:11.5px;
+    background:linear-gradient(#ffe9a8,#ffd561); border-top:1px solid #fff3cf;
+    border-bottom:1px solid var(--sh); color:#4a3800; }
+  .botBannerIcon{ font-size:14px; flex:0 0 auto; }
   .muted{ color:#666; font-size:11px; }
 
   /* ---- invite dialog ---- */
@@ -256,6 +299,12 @@
     <span class="hasmenu" id="fileMenu"><u>F</u>ile<div class="dropdown" id="fileDrop" hidden><div class="mi" id="pedoItem">pedo</div></div></span><span class="hasmenu" id="insertMenu"><u>I</u>nsert<div class="dropdown" id="insertDrop" hidden><div class="mi" data-emoji="🍆">Dicks</div><div class="mi" data-emoji="🧸">Toys</div><div class="mi" data-emoji="🥒">Cucumbers</div></div></span><span class="hasmenu" id="peopleMenu"><u>P</u>eople<div class="dropdown" id="peopleDrop" hidden><div class="mi" id="toggleRosterItem">Show/Hide Roster</div><div class="mi" id="myContactItem">Add My Contact Info…</div></div></span><span class="hasmenu" id="helpMenu"><u>H</u>elp</span>
   </div>
 
+  <!-- Bot budget banner — only shown once the month's $10 is gone (LEN-1453) -->
+  <div id="botBanner" class="botBanner" hidden>
+    <span class="botBannerIcon">💸</span>
+    <span id="botBannerText"></span>
+  </div>
+
   <div class="body">
     <div class="chatcol">
       <div class="roomtitle" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -312,6 +361,9 @@
       <div class="hd">👥 People Here</div>
       <div class="mlist sunken" id="mlist"></div>
       <div class="mcount"><span id="memCount">0</span> online</div>
+      <!-- AOL-style ad rail: rotates league news, commissioner announcements,
+           and period parody ads (LEN-1453) -->
+      <div class="adrail" id="adRail" aria-label="League bulletins"></div>
     </div>
   </div>
 
@@ -521,6 +573,9 @@
   // Standalone build — its own Supabase client, no LendPaper code. localStorage is
   // per-origin, so this shares NOTHING with any other site's auth session.
   import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+  // Where the "the bots cost money" nags point people. Keep in sync with the
+  // FF_VENMO_HANDLE secret on the ff-bot-reply function.
+  const VENMO_HANDLE = '@Steve-Gowa';
   const SUPABASE_URL = 'https://arpquyoucdsdmbetgftj.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_R18l5zBtRQ1CkSGNBkgZkg_dVVBldlb';
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -684,6 +739,7 @@
     });
     $('memCount').textContent = rows.length;
     $('hereCount').textContent = rows.length;
+    if(adState.stats) adState.stats.here = rows.length;
   }
   function renderTyping(){
     if(!channel){ $('typingLine').textContent=''; return; }
@@ -719,6 +775,24 @@
     if(data && data.id) selfPosted[data.id] = 1;
     addMsg(me.name, me.color, v, false);
     scroll();
+    pokeBots();
+  }
+
+  /* ---------- reactive bots (LEN-1453) ----------
+     A human just spoke, so nudge the edge function to have the room answer
+     them. Every decision that matters — is anyone else here, is the monthly
+     budget spent, is it too soon since the last reply — is made server-side in
+     ff-bot-reply; this call is only a trigger and can be safely ignored or
+     spammed. Fire-and-forget: a slow or failed bot reply must never make the
+     user's own message look like it didn't send. */
+  var botPokeAt = 0;
+  function pokeBots(){
+    var now = Date.now();
+    if(now - botPokeAt < 5000) return;   // client-side courtesy throttle only
+    botPokeAt = now;
+    supabase.functions.invoke('ff-bot-reply', { body: {} })
+      .then(function(r){ if(r && r.data && r.data.skipped === 'monthly_cap') refreshBotBanner(); })
+      .catch(function(){});
   }
   $('sendBtn').addEventListener('click', send);
   input.addEventListener('keydown', function(e){ if(e.key==='Enter') send(); });
@@ -1196,6 +1270,11 @@
       from += PAGE;
     }
     renderLog(); scroll();
+    adState.stats = { total: loaded, here: 0, missing: 0 };
+    startPresence();
+    startAdRail();
+    refreshBotBanner();
+    setInterval(refreshBotBanner, 120000);
     addHost('*** You have entered the room "'+ (ROOM==='league'?'Latvian Thumbs':ROOM) +'" ***');
     sndOpen();
     setTimeout(sndMail, 220);
@@ -1439,6 +1518,9 @@
       return;
     }
     ROSTER = data;
+    // Feeds the "N still not in here" ad card. Commissioner-only, same as the
+    // roster itself — everyone else's rail just skips that card.
+    if(adState.stats) adState.stats.missing = ROSTER.filter(function(m){ return !m.joined; }).length;
     renderRoster();
   }
   // The sender goes in To: (some mail apps refuse an empty To:) and is dropped
@@ -1477,6 +1559,121 @@
   function tick(){ var d=new Date(),h=d.getHours(),m=d.getMinutes(),ap=h>=12?'PM':'AM',hh=((h+11)%12)+1;
     $('clock').textContent = hh+':'+(m<10?'0':'')+m+' '+ap; }
   tick(); setInterval(tick, 15000);
+
+  /* ---------- AOL ad rail (LEN-1453) ----------
+     Three kinds of card share one slot and rotate:
+       1. LEAGUE NEWS  — generated from live data (draft countdown, who's
+          missing, message milestones, who's gone quiet)
+       2. ANNOUNCEMENT — whatever the commissioner posted (ff_chat_announcements)
+       3. PARODY       — period AOL house ads with the league's in-jokes
+     News is computed client-side from counts we already have, so the rail costs
+     no extra queries beyond one cheap announcements read. */
+  var DRAFT_NIGHT = new Date('2026-08-27T00:00:00');
+
+  function daysUntilDraft(){
+    return Math.ceil((DRAFT_NIGHT - new Date()) / 86400000);
+  }
+
+  var PARODY_ADS = [
+    { kicker:'America Online', head:'ALL-NEW LATVIAN THUMBS 7.0!', sub:'Now with 3 members who actually respond. Free trial: 1000 hours of Gowa ignoring your trade.', cta:'Order the CD' },
+    { kicker:'Limited Time', head:'50 FREE HOURS', sub:'Of arguing about keeper inflation. No credit card. No resolution.', cta:'Call 1-800-KEEPER' },
+    { kicker:'Nationwide Sale', head:'DUES — JUST $50', sub:'Was also $50 last year. And you still have not paid it.', cta:'Venmo Now' },
+    { kicker:'Cause of the Day', head:'PUNCH GOWA IN THE FACE', sub:'Help a commissioner learn. Volunteers being accepted at the draft.', cta:'Sign Up' },
+    { kicker:'Popular Videos', head:'MCSORLEY’S: THE DOCUMENTARY', sub:'Nine men. One bar. Zero completed draft boards.', cta:'Watch Now' },
+    { kicker:'You’ve Got Mail', head:'42 UNREAD THREADS', sub:'41 are Chris. One is Casey-Ann answering for Gordon.', cta:'Read Mail' },
+    { kicker:'Upgrade Today', head:'LATVIAN THUMBS GOLD', sub:'Includes: being told your team is bad, but in italics.', cta:'Learn More' },
+    { kicker:'Buddy List', head:'GORDON HAS SIGNED ON', sub:'This is a drill. This has never happened before.', cta:'Say Hi' },
+  ];
+
+  var adState = { i: 0, announcements: [], stats: null };
+
+  function newsCards(){
+    var out = [], d = daysUntilDraft(), s = adState.stats || {};
+    if(d > 0){
+      out.push({ kicker:'League Bulletin', head: d + (d === 1 ? ' DAY' : ' DAYS') + ' TO THE DRAFT',
+                 sub:'August 27th. Clear your night or get auto-drafted into oblivion.', cta:'Aug 27' });
+    } else if(d === 0){
+      out.push({ kicker:'Tonight', head:'DRAFT NIGHT IS TONIGHT', sub:'No more excuses. No more Doodle polls.', cta:'Be There' });
+    }
+    if(s.missing > 0){
+      out.push({ kicker:'Roster Watch', head: s.missing + ' STILL NOT IN HERE',
+                 sub:'They were invited. They have email. Draw your own conclusions.', cta:'Shame Them' });
+    }
+    if(s.total >= 100){
+      var milestone = Math.floor(s.total / 100) * 100;
+      out.push({ kicker:'Milestone', head: milestone.toLocaleString() + ' MESSAGES',
+                 sub:'Almost none of them about football.', cta:'Keep Going' });
+    }
+    if(s.here >= 2){
+      out.push({ kicker:'Rare Event', head: s.here + ' PEOPLE ONLINE',
+                 sub:'The bots have politely shut up. Enjoy the actual humans.', cta:'Talk' });
+    }
+    return out;
+  }
+
+  function renderAd(){
+    var rail = $('adRail'); if(!rail) return;
+    var pool = [];
+    newsCards().forEach(function(c){ pool.push({ kind:'NEWS', card:c }); });
+    adState.announcements.forEach(function(a){
+      pool.push({ kind:'FROM THE COMMISSIONER',
+                  card:{ kicker:'Announcement', head:a.headline, sub:a.body || '', cta:a.cta || '' } });
+    });
+    // Parody filler keeps the rail alive when there's genuinely no news.
+    pool.push({ kind:'Advertisement', card: PARODY_ADS[adState.i % PARODY_ADS.length] });
+
+    var pick = pool[adState.i % pool.length];
+    adState.i++;
+    var c = pick.card;
+
+    rail.innerHTML = '';
+    var card = document.createElement('div');
+    card.className = 'adcard t' + (adState.i % 3);
+    var html = '<div class="adBody">';
+    if(c.kicker) html += '<div class="adKicker">' + esc(c.kicker) + '</div>';
+    html += '<div class="adHead">' + esc(c.head) + '</div>';
+    if(c.sub) html += '<div class="adSub">' + esc(c.sub) + '</div>';
+    if(c.cta) html += '<div class="adCta">' + esc(c.cta) + '</div>';
+    html += '</div><div class="adLabel">' + esc(pick.kind) + '</div>';
+    card.innerHTML = html;
+    rail.appendChild(card);
+  }
+
+  async function startAdRail(){
+    if(!$('adRail')) return;
+    try{
+      var a = await supabase.from('ff_chat_announcements')
+        .select('headline,body,cta').eq('active', true).order('created_at', { ascending:false }).limit(5);
+      if(a && !a.error) adState.announcements = a.data || [];
+    }catch(e){ /* announcements are optional — the rail still runs without them */ }
+    renderAd();
+    setInterval(renderAd, 12000);
+  }
+
+  /* ---------- presence + bot budget banner (LEN-1453) ----------
+     The realtime presence channel already knows who's here, but an edge
+     function can't read it — so we heartbeat into ff_chat_presence too. That's
+     what lets the bots shut up when 2+ real people are actually in the room
+     (lurkers included, not just whoever last typed). */
+  function startPresence(){
+    var ping = function(){ supabase.rpc('ff_presence_ping').then(function(){}, function(){}); };
+    ping();
+    setInterval(ping, 30000);
+    document.addEventListener('visibilitychange', function(){ if(!document.hidden) ping(); });
+  }
+
+  async function refreshBotBanner(){
+    var bar = $('botBanner'); if(!bar) return;
+    try{
+      var r = await supabase.rpc('ff_bot_status');
+      var s = Array.isArray(r.data) ? r.data[0] : r.data;
+      if(!s || !s.capped){ bar.hidden = true; return; }
+      $('botBannerText').textContent =
+        'The bots have burned through this month’s $' + Number(s.usd_cap).toFixed(0) +
+        ' and are off until the 1st. Venmo Steve if you want them back sooner — ' + VENMO_HANDLE;
+      bar.hidden = false;
+    }catch(e){ /* banner is decoration; never let it break the room */ }
+  }
 
   /* ---------- boot ---------- */
   if(inApp){ $('webviewWarn').hidden=false; }
