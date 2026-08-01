@@ -152,6 +152,31 @@ drop policy if exists "ff_chat_allowlist_admin_insert" on public.ff_chat_allowli
 create policy "ff_chat_allowlist_admin_insert" on public.ff_chat_allowlist
   for insert to authenticated with check (public.is_ff_admin());
 
+-- ── commissioner-only roster read (for "Invite the League") ───────────────────
+-- Powers the roster mail-out inside the invite dialog: who's on the list, and
+-- who has actually signed in at least once (`joined`) so the commissioner can
+-- nudge only the stragglers. ff_chat_allowlist STILL has no select policy —
+-- this SECURITY DEFINER function is the one exception, and it returns zero rows
+-- unless is_ff_admin() passes, so no ordinary member's browser can enumerate the
+-- league's email addresses.
+create or replace function public.ff_roster()
+returns table(email text, label text, joined boolean)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select a.email,
+         a.label,
+         exists (select 1 from auth.users u where lower(u.email) = lower(a.email)) as joined
+  from public.ff_chat_allowlist a
+  where public.is_ff_admin()
+  order by a.added_at;
+$$;
+revoke all on function public.ff_roster() from public;
+revoke all on function public.ff_roster() from anon;
+grant execute on function public.ff_roster() to authenticated;
+
 do $$
 begin
   if not exists (

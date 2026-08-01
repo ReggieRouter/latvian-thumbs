@@ -124,6 +124,12 @@
   .emojiDrop .em:hover{ background:var(--sel); }
   .gifThumb{ width:100%; display:block; cursor:pointer; border:1px solid var(--sh); background:var(--sh); min-height:60px; }
   .gifThumb:hover{ outline:2px solid var(--title2); }
+  /* the shared .body is a flex row; the GIF picker stacks instead */
+  .gifWin .body{ display:block; }
+  .gifTags{ display:flex; flex-wrap:wrap; gap:3px; margin:0 0 7px; max-height:52px; overflow-y:auto; }
+  .gifTags button{ font:inherit; font-size:10.5px; padding:1px 7px; cursor:pointer; background:var(--face);
+                   border:1px solid; border-color:var(--hi) var(--sh) var(--sh) var(--hi); color:#000; }
+  .gifTags button:active,.gifTags button[aria-pressed="true"]{ border-color:var(--sh) var(--hi) var(--hi) var(--sh); background:#dcdcdc; }
   .tx img.gifMsg{ max-width:220px; max-height:220px; display:block; margin-top:3px; border:1px solid var(--sh); }
 
   /* ---- input row ---- */
@@ -168,7 +174,7 @@
   .modalwrap{ position:fixed; inset:0; background:rgba(0,0,0,.25); display:none; place-items:center; z-index:50; padding:16px; }
   .modalwrap.open{ display:grid; }
   .invite{ width:440px; max-width:100%; }
-  .invite .body{ display:block; padding:14px 16px 16px; }
+  .invite .body{ display:block; padding:14px 16px 16px; max-height:84vh; overflow-y:auto; }
   .invite h2{ font-size:13px; margin:0 0 4px; }
   .invite .lead{ font-size:11.5px; color:#333; margin:0 0 10px; line-height:1.5; }
   .linkbox{ display:flex; gap:5px; margin-bottom:12px; }
@@ -177,6 +183,24 @@
   .share .btn{ display:flex; align-items:center; gap:7px; justify-content:flex-start; padding:7px 10px; min-width:0; text-align:left; }
   .share .btn .gi{ width:18px; height:18px; flex:0 0 18px; }
   .dismiss{ display:flex; justify-content:flex-end; margin-top:13px; }
+
+  /* ---- roster mail-out (commissioner only, inside the invite dialog) ---- */
+  .rosterWrap{ margin-top:14px; border-top:1px solid var(--sh); padding-top:11px; }
+  .rosterHead{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:7px; }
+  .rosterHead h3{ font-size:12px; margin:0; }
+  .blast{ display:grid; gap:6px; margin-bottom:9px; }
+  .blast .btn{ display:flex; align-items:center; gap:7px; justify-content:flex-start; padding:7px 10px; min-width:0; text-align:left; }
+  .blast .btn .gi{ width:18px; height:18px; flex:0 0 18px; }
+  .rosterList{ max-height:190px; overflow-y:auto; border:2px solid; border-color:var(--sh) var(--hi) var(--hi) var(--sh); background:var(--paper); }
+  .rosterRow{ display:flex; align-items:center; gap:8px; padding:4px 7px; border-bottom:1px solid #e3e3e3; }
+  .rosterRow:last-child{ border-bottom:0; }
+  .rosterWho{ flex:1; min-width:0; }
+  .rosterName{ font-size:11.5px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rosterMail{ font-size:10.5px; color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rosterTag{ font-size:10px; padding:0 5px; flex:0 0 auto; border:1px solid; }
+  .rosterTag.in{ background:#dff4d8; border-color:#5f9c50; color:#1d5210; }
+  .rosterTag.out{ background:#fff3cd; border-color:#b59f00; color:#6b5b00; }
+  .rosterRow .btn{ min-width:0; padding:1px 8px; font-size:11px; flex:0 0 auto; }
 
   /* ---- join requests (admin) ---- */
   .reqRow{ display:flex; justify-content:space-between; align-items:center; gap:8px; padding:7px 9px; border-bottom:1px solid var(--sh); }
@@ -391,6 +415,22 @@
         <button class="btn" id="shareNative"><svg class="gi" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.4" fill="#555"/><circle cx="17" cy="6" r="2.4" fill="#555"/><circle cx="17" cy="18" r="2.4" fill="#555"/><path d="M8 11l7-4M8 13l7 4" stroke="#555" stroke-width="1.4"/></svg>Share…</button>
         <button class="btn" id="copyText"><svg class="gi" viewBox="0 0 24 24"><rect x="7" y="4" width="12" height="15" rx="1.5" fill="#fff" stroke="#666"/><rect x="5" y="6" width="12" height="15" rx="1.5" fill="#eee" stroke="#666"/></svg>Copy invite text</button>
       </div>
+
+      <!-- Commissioner-only: mail the actual roster. Hidden for everyone else so
+           nobody else's browser ever sees the league's email addresses. -->
+      <div class="rosterWrap" id="rosterWrap" hidden>
+        <div class="rosterHead">
+          <h3>📇 The roster</h3>
+          <span class="muted" id="rosterCount">Loading…</span>
+        </div>
+        <div class="blast">
+          <button class="btn" id="mailMissing"><svg class="gi" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" fill="#fff3cd" stroke="#b59f00"/><path d="M4 6l8 6 8-6" fill="none" stroke="#b59f00" stroke-width="1.6"/></svg><span id="mailMissingLabel">Email everyone who isn't in yet</span></button>
+          <button class="btn" id="mailAll"><svg class="gi" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" fill="#d9d9d9" stroke="#888"/><path d="M4 6l8 6 8-6" fill="none" stroke="#888" stroke-width="1.6"/></svg><span id="mailAllLabel">Email the whole league</span></button>
+        </div>
+        <div class="rosterList" id="rosterList"></div>
+        <p class="muted" style="margin:6px 0 0;">Group emails go out <b>BCC</b>, so nobody sees anyone else's address.</p>
+      </div>
+
       <div class="dismiss"><button class="btn" id="okInvite" style="font-weight:bold;">Done</button></div>
     </div>
   </div>
@@ -437,12 +477,13 @@
 
 <!-- ========================= GIF PICKER ========================= -->
 <div class="modalwrap" id="gifModal">
-  <div class="win raised" style="width:420px;max-width:100%;">
+  <div class="win raised gifWin" style="width:420px;max-width:100%;">
     <div class="titlebar"><div class="t">🎬 GIFs</div><button class="tbtn" id="closeGif" aria-label="Close">✕</button></div>
     <div class="body" style="padding:10px 12px 12px;">
-      <div class="field" style="margin:0 0 8px;">
+      <div class="field" style="margin:0 0 6px;">
         <div class="sunken"><input id="gifSearchInput" placeholder="Search GIFs…" autocomplete="off" style="width:100%;border:0;background:transparent;padding:6px 7px;font-family:inherit;font-size:13px;outline:none;"></div>
       </div>
+      <div id="gifTags" class="gifTags"></div>
       <div id="gifResults" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;max-height:280px;overflow-y:auto;"></div>
       <p class="muted" id="gifMsg" style="min-height:14px;margin-top:6px;">Powered by Tenor.</p>
     </div>
@@ -788,50 +829,164 @@
     document.addEventListener('click', function(){ drop.hidden=true; });
   })();
 
-  // GIF picker — Tenor's free public API, no signup on your end. Search posts
-  // straight to chat when you click a thumbnail (like Discord's GIF button).
+  // GIF picker — two sources, in this order:
+  //   1. Live Tenor search, IF a real Tenor v2 API key is pasted below. Tenor's old
+  //      public demo key ("LIVDSRZULELA") was retired along with the v1 API, which
+  //      is why this used to just say "unavailable" forever. A free key takes ~2 min
+  //      at https://developers.google.com/tenor/guides/quickstart — paste it in and
+  //      the picker upgrades itself to full search automatically.
+  //   2. BUILT_IN_GIFS — a verified, hotlinked Tenor pack baked into this file so the
+  //      button works with zero setup. Typing filters it; the tag chips browse it.
+  // Clicking any thumbnail posts it straight to chat, like Discord's GIF button.
   (function gifPicker(){
-    var TENOR_KEY = 'LIVDSRZULELA'; // Tenor's own published public demo key — if it
-      // ever stops working, swap in a free key from tenor.com/gifapi (takes ~2 min).
-    var btn=$('toolGif'), modal=$('gifModal'), input=$('gifSearchInput'), results=$('gifResults'), msg=$('gifMsg');
+    var TENOR_KEY = 'PASTE_YOUR_TENOR_API_KEY_HERE';
+    var TENOR_ON  = TENOR_KEY.indexOf('PASTE_') !== 0 && TENOR_KEY.length > 10;
+    var CDN = 'https://media.tenor.com/';
+    var BUILT_IN_GIFS = {
+    "touchdown":["RsmrCOb0dHAAAAAM/touchdown-nfl.gif|touchdown nfl","Zx36TSnB9EIAAAAM/cincinnati-bengals-jerome-simpson.gif|cincinnati bengals jerome simpson","q89NzmL_UoAAAAAM/spike-touchdown.gif|spike touchdown","toyjzEyGQQMAAAAM/pittsburgh-steelers-juju-smith-schuster.gif|pittsburgh steelers juju smith schuster","3AF8QlOgTJEAAAAM/jsn-jaxon-smith-njigba.gif|jsn jaxon smith njigba","yhudPnjYPCQAAAAM/cowboys-touchdown.gif|cowboys touchdown","Q1j0dzzb2X0AAAAM/cincinnati-bengals-jerome-simpson.gif|cincinnati bengals jerome simpson","z9fXgKqOQDEAAAAM/green-bay-packers-bo-melton.gif|green bay packers bo melton","O2XvgGvNQs4AAAAM/pittsburgh-steelers-antonio-brown.gif|pittsburgh steelers antonio brown","ErE2v-hiqpcAAAAM/brock-purdy-49ers.gif|brock purdy 49ers","eWLt-x3HE3kAAAAM/denver-broncos-demaryius-thomas.gif|denver broncos demaryius thomas","Q0-qOIgSeGgAAAAM/patrick-mahomes.gif|patrick mahomes","8vpMT6HBRYMAAAAM/green-bay-packers-dancing.gif|green bay packers dancing","BYwXnHOBYs8AAAAM/spetertv-speter.gif|spetertv speter"],
+    "celebration":["0Sh7u1lRsyEAAAAM/wedding-crasher-hro.gif|wedding crasher hro","7bOU9RFnddsAAAAM/dance-dancing.gif|dance dancing","BfojNsJKhncAAAAM/christmas-eve-merry-christmas-eve.gif|christmas eve merry christmas eve","0tt-k0ByJaMAAAAM/cheers-fireworks.gif|cheers fireworks","fB5v-iDC1qgAAAAM/dancing-dance.gif|dancing dance","E7j4VcIBUhsAAAAM/claire-dancing.gif|claire dancing","czXGu_PaISgAAAAM/happy-dance.gif|happy dance","msiTBjc4uoIAAAAM/party-time.gif|party time","X15e67QrANUAAAAM/the-office.gif|the office","g5hEvY9m8X8AAAAM/little-balloons.gif|little balloons","ufhle56CjFUAAAAM/yippie.gif|yippie","KDTJ8H6aQrYAAAAM/loveyou-hugs.gif|loveyou hugs","KnUNuWc_920AAAAM/cr7-celebration.gif|cr7 celebration","ib6hiCVGlVoAAAAM/minions-its-time-to-party.gif|minions its time to party"],
+    "facepalm":["ZFc20z8DItkAAAAM/facepalm-really.gif|facepalm really","Kbwqk6ZDyrsAAAAM/cringe-embarrassed.gif|cringe embarrassed","ZXBg3F83OWIAAAAM/judy-facepalm.gif|judy facepalm","tXzs0DzxSb0AAAAM/facepalm.gif|facepalm","2kjmf8Kam60AAAAM/dean-winchester.gif|dean winchester","meTnYWFOqDcAAAAM/facepalm-thehuxtables.gif|facepalm thehuxtables","Xz_0QnJIJ9oAAAAM/facepalm-rdj.gif|facepalm rdj","WxufwY6cQV0AAAAM/facepalm.gif|facepalm","5VoJOF3pOM4AAAAM/facepalm-dismay.gif|facepalm dismay","1pLUCAkpcfoAAAAM/9.gif|9","EieIL0MarkAAAAAM/rouseysky-brigitte-nielsen.gif|rouseysky brigitte nielsen","tKQwiQPV2rQAAAAM/sweet-jesus.gif|sweet jesus","2Io5s8jcmrUAAAAM/facepalm-hopeless.gif|facepalm hopeless","5F6-OloAUzEAAAAM/aff-nao-ne.gif|aff nao ne"],
+    "crying jordan":["62eQoDlRyhIAAAAM/crying-meme.gif|crying meme","wTdVILsqVK4AAAAM/michael-jordan-mj.gif|michael jordan mj","b46QBMfB90QAAAAM/smh-shaking.gif|smh shaking","49wrsl9Z69sAAAAM/michaeljordan-crying.gif|michaeljordan crying","T_Mv-XDnLL4AAAAM/crying.gif|crying","DN3nhYKjBCEAAAAM/crying-jordan.gif|crying jordan","BRsKcrK_doAAAAAM/crying-tears.gif|crying tears","K66pxZkPmjwAAAAM/michaeljordan-crying.gif|michaeljordan crying","0fCmnlMnzQgAAAAM/verloren.gif|verloren","MZJgvXR7Q28AAAAM/crying-michael.gif|crying michael","N8QR6MAdulEAAAAM/sadness-depression.gif|sadness depression","7IXBC2VfBokAAAAM/michael-jordan-mj.gif|michael jordan mj","6VbRGxAz4BMAAAAM/jamcat-catjam.gif|jamcat catjam","mVPV9EYXFMoAAAAM/okay-bye-hoodie.gif|okay bye hoodie"],
+    "laughing":["rL4hulhuEIYAAAAM/funny-laughing.gif|funny laughing","K15sk3AFCL0AAAAM/laughing-laughing-hysterically.gif|laughing laughing hysterically","3YX1vx3m6OwAAAAM/laugh-spit.gif|laugh spit","ZZ69Ch98s_0AAAAM/baby-stray-kids.gif|baby stray kids","mgthtWbAg5QAAAAM/petty-ahhh.gif|petty ahhh","I6ZXq7nvtnUAAAAM/chitlins-laugh.gif|chitlins laugh","TKbQdqJ5tCAAAAAM/my-mom-is-kinda-homeless.gif|my mom is kinda homeless","Se-deMV899gAAAAM/baby-laughing-baby.gif|baby laughing baby","b_fyEAmO4oYAAAAM/laughing-laughing-hysterically.gif|laughing laughing hysterically","HRKpvLQ0HdkAAAAM/lol.gif|lol","Py6DFSiHlPgAAAAM/adam-sandler.gif|adam sandler","pMu7ANF4DcQAAAAM/funny-laugh.gif|funny laugh","l1UTiaMrvcMAAAAM/laughing-funny.gif|laughing funny","V4jMyW5cBpQAAAAM/happy.gif|happy"],
+    "shrug":["WuDNxJBDte8AAAAM/eh-meh.gif|eh meh","fZe_pN3zUnkAAAAM/shrug.gif|shrug","0xt4rcvXTwwAAAAM/hmph-shoulder-shrug.gif|hmph shoulder shrug","s85UU1L28CwAAAAM/lol-omg-lol.gif|lol omg lol","i8YW7AlWk4QAAAAM/shrug.gif|shrug","dMyIkk0kOvAAAAAM/sponge-bob-bob.gif|sponge bob bob","xzhcn-ub3OAAAAAM/what-can-you-do.gif|what can you do","5XV8SZdQerQAAAAM/michael-jackson-idk.gif|michael jackson idk","Tr4AHs6dOOQAAAAM/kanye-west-kanye.gif|kanye west kanye","pnOqbEsz0ycAAAAM/shrug-fsm.gif|shrug fsm","BdN0MtOuilcAAAAM/colin-bridgerton-bridgerton.gif|colin bridgerton bridgerton","cCjGEWcg9P4AAAAM/love.gif|love","LNh-Ey5hATAAAAAM/elmo-shrug.gif|elmo shrug","k_r5x2O78z4AAAAM/dexter-shrug-dexter.gif|dexter shrug dexter"],
+    "angry":["2tRtcjY416YAAAAM/me-when-i-see-my-class.gif|me when i see my class","6IJb6BzvI0YAAAAM/cat-kitty.gif|cat kitty","DhWgCg-qDgYAAAAM/angry-mad.gif|angry mad","NDJLISUesWcAAAAM/scream-loud-scream.gif|scream loud scream","kJWQiYgsVKwAAAAM/you-sink-into-my-clothes.gif|you sink into my clothes","02Hyp5H8rREAAAAM/kid-en-sacrement.gif|kid en sacrement","uji-yasU8hgAAAAM/mr-krabs-angry.gif|mr krabs angry","_quwChqgkI4AAAAM/hulk-angry.gif|hulk angry","TBBNcIcVyREAAAAM/angry-mad.gif|angry mad","XsttRhXSeVYAAAAM/angry-powerpuff.gif|angry powerpuff","-0njj_ckYrQAAAAM/mad-angry.gif|mad angry","dIibulOFnWwAAAAM/luffy-funny-angry-luffy-angry-on-robin.gif|luffy funny angry luffy angry on robin","1KaXRD6rPssAAAAM/sack-boy-sack.gif|sack boy sack","NxU66wC_wxUAAAAM/simpson-homer-simpson.gif|simpson homer simpson"],
+    "dumpster fire":["gr25aYU-rroAAAAM/dumpsterfire-flooding.gif|dumpsterfire flooding","R2RaXqV8d9gAAAAM/dumpsterfire-flooding.gif|dumpsterfire flooding","GElyvue_13cAAAAM/april-fools-joke.gif|april fools joke","P6GuXAfRUeIAAAAM/dumpster-fire---aurora-alani.gif|dumpster fire   aurora alani","j_hHkdYj2DgAAAAM/raccoon-dumpster-fire.gif|raccoon dumpster fire","reX4PvJ9J8kAAAAM/dumpster-fire-burn.gif|dumpster fire burn","AyEmz6J3BUYAAAAM/dumpster-fire.gif|dumpster fire","c1rPPHl0vncAAAAM/dumpster-fire.gif|dumpster fire","5g7x69dVZoMAAAAM/dumpster-fire.gif|dumpster fire","hCxz7J9DRdkAAAAM/dumpster-fire-red-bull.gif|dumpster fire red bull","oRhvN8kYq38AAAAM/awkward-silence-awkward.gif|awkward silence awkward","oBYdVqjqG8MAAAAM/dumpster-fire-dumpster-fire-cliff.gif|dumpster fire dumpster fire cliff","JxTOwqSke9IAAAAM/dumpster-fire.gif|dumpster fire","KP_SR-IZDBUAAAAM/fine-this-is-fine.gif|fine this is fine"],
+    "popcorn eating":["hjC-gOl9LZMAAAAM/michael-jackson-comendo-picoca.gif|michael jackson comendo picoca","rmiRonMQOj0AAAAM/jon-stewart-eat.gif|jon stewart eat","Cg2DQtq2yegAAAAM/popcorn-enjoy.gif|popcorn enjoy","KlizV0HJaMgAAAAM/popcorn-eating.gif|popcorn eating","KZkoA-nmv0wAAAAM/popcorn-entertained.gif|popcorn entertained","1LhKZUL-jy4AAAAM/popcorn-popcorn-eating.gif|popcorn popcorn eating","oC9mOsoMZFkAAAAM/dahliabunni-popcorn.gif|dahliabunni popcorn","Ccfd2I5I9RoAAAAM/kenan-thompson-kenan.gif|kenan thompson kenan","1c-W7R5D7GQAAAAM/popcorn-eating-popcorn.gif|popcorn eating popcorn","21YPzc4lDYIAAAAM/lil-duval-popcorn.gif|lil duval popcorn","22GEBUxpnp0AAAAM/popcorn-eating.gif|popcorn eating","Pr3wQdDWJA8AAAAM/lil-duval-popcorn.gif|lil duval popcorn","PY9eQnrggB8AAAAM/roblox-roblox-memes.gif|roblox roblox memes","sm5qVTRdXE0AAAAM/nun-nuns.gif|nun nuns"],
+    "mic drop":["tI9cv0IJlpEAAAAM/rpx-syria-mic-drop.gif|rpx syria mic drop","hNtVMBaijjEAAAAM/cartoon.gif|cartoon","ftT7VjHhK_sAAAAM/mic-drop-supa-hot-fire.gif|mic drop supa hot fire","R-zK6fNNZz4AAAAM/boom-bang.gif|boom bang","2CucVUU46GMAAAAM/boom-mic-drop.gif|boom mic drop","DjERGqcxpIkAAAAM/talos-mic-drop.gif|talos mic drop","Gf15Ue_3FUQAAAAM/john-cena-heel-john-cena.gif|john cena heel john cena","GspHx1J2fPQAAAAM/boom-annakendrick.gif|boom annakendrick","dPmjsEXRQY4AAAAM/suga-mic-drop-mic-drop.gif|suga mic drop mic drop","V9uLAFbqfaEAAAAM/mic-drop-drop-the-mic.gif|mic drop drop the mic","PzY75riTLG0AAAAM/cat-yoongi.gif|cat yoongi","RjpP0aKqzJcAAAAM/boyle-boom.gif|boyle boom","RKthzFyTXP8AAAAM/sakigifs-beyonce.gif|sakigifs beyonce","l4TygYcB-5AAAAAM/microphone-preach.gif|microphone preach"],
+    "trash":["289glLCgxIQAAAAM/dumping-trash-daniel-labelle.gif|dumping trash daniel labelle","zjKVKrNZ_usAAAAM/trash-garbage.gif|trash garbage","ALbfyeOl5jcAAAAM/trash-spongebob.gif|trash spongebob","I89YVoH0B80AAAAM/sportsnet-sn.gif|sportsnet sn","uaN16NepfIoAAAAM/2021-garbage.gif|2021 garbage","v70DhK_7ry0AAAAM/trash.gif|trash","rK102Qn2G2UAAAAM/bubba-trash.gif|bubba trash","FdPd8kvBY5sAAAAM/noita-homunculus.gif|noita homunculus","ddH8-nkhJkQAAAAM/trash-can.gif|trash can","MgCmEDppTAMAAAAM/is-this-trash-this-is-trash.gif|is this trash this is trash","SEZLwkTgK1QAAAAM/absolute-garbage-absolute-cinema.gif|absolute garbage absolute cinema","nLCqUiMONAMAAAAM/stupid.gif|stupid","2GwvVXLsJ4QAAAAM/trash-cans-dancing-trash-cans.gif|trash cans dancing trash cans","LIuXQBWelFkAAAAM/trash-vs-garbage-trash.gif|trash vs garbage trash"],
+    "nervous":["tDfXlJnVctgAAAAM/sweating-nervous.gif|sweating nervous","4eRu28PukHMAAAAM/sponge-subaru.gif|sponge subaru","sqyQWXwzJiMAAAAM/andy-samberg-snl.gif|andy samberg snl","HVW0-eukOVYAAAAM/right-yes.gif|right yes","MLhutFZkS7EAAAAM/hyperventilate-cant-breathe.gif|hyperventilate cant breathe","bexR9OJSSj4AAAAM/ehh-idk.gif|ehh idk","f5Pyb4cIdK4AAAAM/dog-dog-meme.gif|dog dog meme","Ah9EqT0Xu9oAAAAM/seal-shy.gif|seal shy","N0BcIlIQ-TQAAAAM/sweating-gif-nervous.gif|sweating gif nervous","iGj4hcvjpyIAAAAM/not-a-good-look.gif|not a good look","uLUGc97Qs9MAAAAM/ehh-idk.gif|ehh idk","PghvsegqvyAAAAAM/over-it-done.gif|over it done","AA0vds8TjEwAAAAM/stress-stressed.gif|stress stressed","Ihx4nu2RNxMAAAAM/dread-anxiety.gif|dread anxiety"],
+    "shocked":["TJPExKvCOkEAAAAM/shocked-im-shocked.gif|shocked im shocked","ThLxxC0zE0YAAAAM/shocked-surprised.gif|shocked surprised","2yfjpJFh4jIAAAAM/ishowspeed-react-ishowspeed-shocked.gif|ishowspeed react ishowspeed shocked","HnujPMCyYYQAAAAM/flight-shocked.gif|flight shocked","f_h1-epXI8wAAAAM/shocked.gif|shocked","OBHElaSUCjQAAAAM/miss-jay-jay.gif|miss jay jay","Bupz5-0Sx7UAAAAM/howlers-den-gasp.gif|howlers den gasp","jDAN3hrbrnAAAAAM/emoji-yellow-emoji.gif|emoji yellow emoji","7-fu1GvwLq8AAAAM/shocked-cat-shocked-meme.gif|shocked cat shocked meme","aLoZNO7gRQoAAAAM/shocked-cat-shocked.gif|shocked cat shocked","uSoOPqCRNUMAAAAM/pug-pugs.gif|pug pugs","T2roC7X0sQsAAAAM/surprised-shocked.gif|surprised shocked","fdSKcyz-VskAAAAM/look-holy.gif|look holy","JHuU14ekU3EAAAAM/ishowspeed-deglove.gif|ishowspeed deglove"],
+    "eye roll":["jns0xRdYiOUAAAAM/annoyed-eye-roll.gif|annoyed eye roll","xb9VtNWmh_cAAAAM/milastauffer-whatever.gif|milastauffer whatever","TgP4sNl3634AAAAM/ugh.gif|ugh","Lsyr-2LnlMIAAAAM/huh.gif|huh","2MsUJVtHpBIAAAAM/ugh-stanleyhudson.gif|ugh stanleyhudson","CeEuKm9-BgYAAAAM/chihuahua-yeah-right.gif|chihuahua yeah right","sV5-gTFE6bEAAAAM/annoyed-whatever.gif|annoyed whatever","1odpMJWkR1MAAAAM/y-baby-doll.gif|y baby doll","8S038rPjraoAAAAM/whatever.gif|whatever","VKUFPxkl8eYAAAAM/disgusted-look-attitude.gif|disgusted look attitude","PAiTzuwnIU8AAAAM/duhhh.gif|duhhh","fE7FJsSepK4AAAAM/ugh-smh.gif|ugh smh","_lqbiLzaqYQAAAAM/whatever-really.gif|whatever really","4XLuq3wItFsAAAAM/ok-bye.gif|ok bye"],
+    "thumbs up":["edIjWNlTBl0AAAAM/ok-nice.gif|ok nice","wfAmmScM6sAAAAAM/awesome-ok.gif|awesome ok","xjvmoEYtjwEAAAAM/thumbs-up-double-thumbs-up.gif|thumbs up double thumbs up","YXJb-GI93WYAAAAM/like.gif|like","xLLfA5HW0-0AAAAM/cat.gif|cat","MpC76hQbFOkAAAAM/thumbsup.gif|thumbsup","rQShzIwrKKgAAAAM/gary-busey-thumbs-up.gif|gary busey thumbs up","N4V6dSD-jKgAAAAM/funny-memes-funny-memes-2024.gif|funny memes funny memes 2024","iP0uPCrASUEAAAAM/happy-ok.gif|happy ok","r1sSb_12_SoAAAAM/trumpone-you.gif|trumpone you","_Q5fyE8bATAAAAAM/yes-ball.gif|yes ball","bDmyKRMnKMcAAAAM/like-cat.gif|like cat","837gLHl7p5gAAAAM/thumbs-up.gif|thumbs up","1dI-uGC9MI8AAAAM/golf.gif|golf"],
+    "no way":["XwBn9yVnYD8AAAAM/kto-kounotori.gif|kto kounotori","-9qcXm3qqPsAAAAM/shocked-surprised.gif|shocked surprised","Wkmydy1_-TUAAAAM/kat-kanada-katkanada.gif|kat kanada katkanada","we9F9lBaHKMAAAAM/whaaa-what.gif|whaaa what","FhSelZH5c5MAAAAM/ohno-smh.gif|ohno smh","U4nwKcWlsfUAAAAM/no-no-no-meme.gif|no no no meme","Kdio_QFSgVcAAAAM/safuu-safuuv2.gif|safuu safuuv2","3cHnKHDri7wAAAAM/no-way-meme.gif|no way meme","s6JQBf-h7FQAAAAM/no-way.gif|no way","z_XOepJyYxEAAAAM/nah-nope.gif|nah nope","tQt3h-a-emoAAAAM/nope-baby.gif|nope baby","R3OMEA-BhtAAAAAM/no-way-u-said-that.gif|no way u said that","Epucc165dVcAAAAM/nope-smh.gif|nope smh","gQuwfmykOMcAAAAM/say-whaaat-whaa.gif|say whaaat whaa"],
+    "deal with it":["t4cCWUo0djUAAAAM/deal-with-it-ryan-gosling.gif|deal with it ryan gosling","S-s-9qKnviwAAAAM/jack-nicholson-deal-with-it.gif|jack nicholson deal with it","DZpBsRIU9HsAAAAM/prquitos-cute.gif|prquitos cute","k4OJc-GqHJYAAAAM/deal-with-it.gif|deal with it","MN-56f43cAMAAAAM/pickle-deal-with-it.gif|pickle deal with it","nrMkQCntlN4AAAAM/deal-with-it-spin.gif|deal with it spin","Fm4OAwNU-oAAAAAM/yall-gonna-have-to-learn-to-deal-with-that-butters-stotch.gif|yall gonna have to learn to deal with that butters stotch","yE5bQ4ODE4AAAAAM/birk-deal-with-it.gif|birk deal with it","PYlZI9zdsUEAAAAM/deal-with-it-cat.gif|deal with it cat","xjYUidkm0fUAAAAM/deal-with-it-audrey-hepburn.gif|deal with it audrey hepburn","FfMeuPepQUAAAAAM/deal-with-it-sunglasses.gif|deal with it sunglasses","i0igpxwRBx4AAAAM/deal-with-it-cya.gif|deal with it cya","r6Ivy_y3euAAAAAM/almyros-almy.gif|almyros almy","WNbFUSKBBg4AAAAM/let-a-pro-deal-with-it-beavis.gif|let a pro deal with it beavis"],
+    "sad":["hqih2PeHo9UAAAAM/sad.gif|sad","sV60wkdKd0IAAAAM/sad-meme.gif|sad meme","aveJW-reuDAAAAAM/sad-lonely.gif|sad lonely","brgWEelx3kwAAAAM/sad.gif|sad","Ch_6P9HWkf8AAAAM/guy-crying-meme-guy-crying.gif|guy crying meme guy crying","UacnAFq8PhoAAAAM/nub-cat-nub.gif|nub cat nub","NC6CcwwQwxgAAAAM/lobo.gif|lobo","HWlXt1G-wn8AAAAM/sad-cat-sad-cat-meme.gif|sad cat sad cat meme","QSh_yh7q8bwAAAAM/grumpy-pout.gif|grumpy pout","f4gy27_LRMgAAAAM/gg.gif|gg","x1dYnqeehLAAAAAM/stitch-sad-sad-stitch.gif|stitch sad sad stitch","iyjo3hCfVkUAAAAM/mocha-cry.gif|mocha cry","K_WnxBY8IVQAAAAM/sad-girl.gif|sad girl","t0HpVbgHoxgAAAAM/crying-girl-crying-baby.gif|crying girl crying baby"],
+    "victory dance":["VUnTSm2rysgAAAAM/happy-dance.gif|happy dance","jfqBMAeIcZ8AAAAM/cool-fun.gif|cool fun","Lbrr3HR3CnkAAAAM/snoop-dogg-rap.gif|snoop dogg rap","EnnbjOkQzMkAAAAM/good-boy-dance.gif|good boy dance","PjaSHwdKjmYAAAAM/kuzco-victory-dance.gif|kuzco victory dance","QK_HdZwFC9MAAAAM/snoop-snoopy.gif|snoop snoopy","hSqcRASBAOkAAAAM/monkey-dance-funny.gif|monkey dance funny","ApogGMVjeeAAAAAM/dancing-dance.gif|dancing dance","MuRNhdumXLEAAAAM/dumbdanceparty-woo.gif|dumbdanceparty woo","rZhnx0C79YYAAAAM/gengar-dance.gif|gengar dance","LhJVguSj8KoAAAAM/victory-dance.gif|victory dance","YDQ61UYAPnkAAAAM/victory-dance.gif|victory dance","lmPy-EcNJHsAAAAM/dancing-cat.gif|dancing cat","ae2Nk0Xfs1IAAAAM/celebration-dance.gif|celebration dance"],
+    "fumble":["zkXSl00kD_8AAAAM/catch-fumble.gif|catch fumble","8IBznsxApkwAAAAM/dak-fumble.gif|dak fumble","7T4cuh_ZQbUAAAAM/bro-deadass-thought-i-was-new-subway-surfers.gif|bro deadass thought i was new subway surfers","xgfGiQQRHRwAAAAM/catch-it-drop-pass.gif|catch it drop pass","Sq19GW0U7HsAAAAM/fumble-jets-fumble.gif|fumble jets fumble","OSwgq7Se-wsAAAAM/fumble-foot-ball.gif|fumble foot ball","NWvP8LaUTSMAAAAM/earl-thomas.gif|earl thomas","OuTwFHQ7fWEAAAAM/oprah.gif|oprah","qhlxBJRItzUAAAAM/butt-fumble.gif|butt fumble","PRfjUfkcXmQAAAAM/fumble-football.gif|fumble football","aNSUd9t0TIIAAAAM/manning-fumble.gif|manning fumble","CRk0I_FvsBQAAAAM/phatearl-josh-allen.gif|phatearl josh allen","YsgJValVk6oAAAAM/football-fumble.gif|football fumble","sALXL7sO1kUAAAAM/cowboys-early.gif|cowboys early"],
+    "benched":["8WDsa4Zl4m8AAAAM/kershaw-sad.gif|kershaw sad","P_fWSqL_iooAAAAM/sorry.gif|sorry","_v9QJajK3nIAAAAM/bench-seat.gif|bench seat","q22seGbVlhoAAAAM/cat-sit.gif|cat sit","f2JOgDVaf_0AAAAM/jaiden-animations.gif|jaiden animations","zLwWajR13CAAAAAM/space-jam.gif|space jam","hQJYz3gdrPsAAAAM/bench-beak.gif|bench beak","K3D2HqvxZ5wAAAAM/baseball-netting-baseball-infield-tarp.gif|baseball netting baseball infield tarp","dXSX7gptw6cAAAAM/football-nfl.gif|football nfl","CHdDVZ3XXMsAAAAM/tim-duncan-gang.gif|tim duncan gang","dkj7oSI7aUMAAAAM/idwbu-idwbuow.gif|idwbu idwbuow","VmF_BLOy2z4AAAAM/notbad-basketball.gif|notbad basketball","jPdusAYdgSQAAAAM/christian-mccaffrey-them-bench-warmers-coming-for-you.gif|christian mccaffrey them bench warmers coming for you","BS8--F4cpEkAAAAM/kyrie-irving.gif|kyrie irving"],
+    "chefs kiss":["LLLJYVQJNVAAAAAM/chefs-kiss-french-chef.gif|chefs kiss french chef","zZNaLeaCiiEAAAAM/amy-poehler-chefs-kiss.gif|amy poehler chefs kiss","YI6V_0kbOaEAAAAM/chest-kiss.gif|chest kiss","otKUwAfDBDcAAAAM/emoji.gif|emoji","8LIa1sWQ5H0AAAAM/jonas-brothers-chef-kiss.gif|jonas brothers chef kiss","PXBfQhD38iIAAAAM/apple-music-kid-cudi.gif|apple music kid cudi","b5d57XfRuY0AAAAM/chefs-kiss-french-chef.gif|chefs kiss french chef","Fr4iVGDwFWwAAAAM/love-it.gif|love it","W4VefhdyGiMAAAAM/papito-ily.gif|papito ily","p2M-4gFmwGcAAAAM/ufm.gif|ufm","qzarTDEh6fsAAAAM/amy-poehler-chefs-kiss.gif|amy poehler chefs kiss","kCUmGfNdSPEAAAAM/chefs-kiss-chef-kiss.gif|chefs kiss chef kiss","e7vCYM2F6VsAAAAM/ok-okay.gif|ok okay","Wy7z2JeIp_kAAAAM/adam-driver-chefs-kiss.gif|adam driver chefs kiss"],
+    "salty":["aIjTBgsbpMMAAAAM/so-salty-salt-bae.gif|so salty salt bae","MkkXxHRbXtsAAAAM/all-these-flavors.gif|all these flavors","0-sdO3pOeQYAAAAM/salvy-most-interesting-man.gif|salvy most interesting man","Zt3uHIw51eAAAAAM/salty.gif|salty","KZLeFS12zfQAAAAM/salty-but-sweet-salty.gif|salty but sweet salty","0NtuMx5NndAAAAAM/salty-alone.gif|salty alone","X5Ba7RFKhvwAAAAM/sad-face-salty.gif|sad face salty","onyp0tYoQrcAAAAM/salty-salty-meter.gif|salty salty meter","EvCjazHaKUUAAAAM/salty-bitter.gif|salty bitter","WjVjA6XWSEYAAAAM/too-much-salt-salty.gif|too much salt salty","QlWLf_fdzO8AAAAM/sassy-sass.gif|sassy sass","D2hKd3PFO_oAAAAM/warriors-curry.gif|warriors curry","CQPzFCAn8h8AAAAM/gabe.gif|gabe","3GLeeh7o-FEAAAAM/saltine.gif|saltine"],
+    "cheering":["q6fpGpvQ1TUAAAAM/squid-game-front-man.gif|squid game front man","hSL-CHcbewAAAAAM/sol-cheer-solana-cheer.gif|sol cheer solana cheer","rzdfqZQtUV0AAAAM/yay-yippie.gif|yay yippie","4EV09gUvvvAAAAAM/xavarchive.gif|xavarchive","9pmaYkvoHYoAAAAM/yay-friends.gif|yay friends","zPtXPySCgYcAAAAM/yelling-meryl-streep.gif|yelling meryl streep","_0lZJyJO868AAAAM/cheers-cheer.gif|cheers cheer","CEfNKY-zkyQAAAAM/cheering-minions.gif|cheering minions","fin5npoPuJIAAAAM/cheers-happy.gif|cheers happy","7m9Q-Rf2v_kAAAAM/pitowontwt-crowd-cheering.gif|pitowontwt crowd cheering","7sBftNDij-8AAAAM/cheers.gif|cheers","eqOAztv8M54AAAAM/you-got-this-motivation.gif|you got this motivation","HiV_0bai9w8AAAAM/cheering-wow.gif|cheering wow","vYSJP_AyIBMAAAAM/sunakook-peanuts.gif|sunakook peanuts"],
+    "disappointed":["Ksyb55_VNPEAAAAM/disappointed-wriotags.gif|disappointed wriotags","c4zIziOkQXIAAAAM/this-mfer-smh.gif|this mfer smh","CxqdtLtL2nEAAAAM/alien-cat-alien.gif|alien cat alien","VHYa6H1Qx8YAAAAM/spongebob.gif|spongebob","-oR8QmI6SUcAAAAM/yoda-star-wars.gif|yoda star wars","APQS6oV6Lq0AAAAM/disappointed-stressed-out.gif|disappointed stressed out","MbcrKQuD0N0AAAAM/sad.gif|sad","wrW08MnAcJEAAAAM/disappointed-baby.gif|disappointed baby","IVPG3rqGl2QAAAAM/john-cena-sad.gif|john cena sad","JPy_zAr6pa0AAAAM/cat-kitty.gif|cat kitty","kmDOJnIbip0AAAAM/fahh-fail.gif|fahh fail","5cMqBJ8QOzMAAAAM/disappointment.gif|disappointment","IpBYhJKqym4AAAAM/high-cat.gif|high cat","KeVyeoretrcAAAAM/side-eye-side-eyes.gif|side eye side eyes"],
+    "clapping":["dk14TWjRq5AAAAAM/bravo-gif.gif|bravo gif","Tut-NCefoD0AAAAM/clapping-hands.gif|clapping hands","eakvOpIu7fAAAAAM/sarcastic-clap.gif|sarcastic clap","q6NxxwmIabgAAAAM/magiccraftgifs-magiccraftgame.gif|magiccraftgifs magiccraftgame","ldtenI69xG8AAAAM/bravo-clapping.gif|bravo clapping","nQFTiES4VtMAAAAM/yay-celebrate.gif|yay celebrate","57gD-gynMDoAAAAM/tears-of-joy-trars.gif|tears of joy trars","d9PZBo-BAGsAAAAM/applause-applaud.gif|applause applaud","-H60ptJ7L84AAAAM/speed-meme-epeed.gif|speed meme epeed","28dKDRSb5dQAAAAM/wordle-seal.gif|wordle seal","UAtjrr8U3jwAAAAM/periodt-period.gif|periodt period","kKI7PwwmOJEAAAAM/clapping-cheeks.gif|clapping cheeks","jKl8CMIHD1sAAAAM/sza-smile.gif|sza smile","xCOhOoy303sAAAAM/pokemon-pikachu.gif|pokemon pikachu"],
+    "sleeping bored":["4eF0XKHqDB4AAAAM/meeting-bored.gif|meeting bored","eu_piOKqI8kAAAAM/bubble-bass-sleep.gif|bubble bass sleep","3QSDIxvUNw0AAAAM/boring-sleep.gif|boring sleep","z_imqNtyMZUAAAAM/spongebob-mr-krabs.gif|spongebob mr krabs","3QgjWIhYn8UAAAAM/bored-sleepy.gif|bored sleepy","-okejhxQDDoAAAAM/muppets-muppet-show.gif|muppets muppet show","ODNAk2T32DkAAAAM/sleepy-tired.gif|sleepy tired","-qlnBMZSphQAAAAM/benoit-paire-sleeping.gif|benoit paire sleeping","W6FNi_khAI0AAAAM/monday-mondays.gif|monday mondays","kklh3fqR8uwAAAAM/matthew-perry-sleepy.gif|matthew perry sleepy","8fWShp1kqfUAAAAM/shadowwind-sleepy.gif|shadowwind sleepy","Jcq-hQdXah4AAAAM/clap-clapping.gif|clap clapping","60ZmYvNQrFAAAAAM/sleepy-tired.gif|sleepy tired","Dp-MTNi6IBMAAAAM/luigi-sleep.gif|luigi sleep"],
+    "confused":["TsmJ8yVex4kAAAAM/what-the-dog-dog-loading.gif|what the dog dog loading","98fIQWqnVQ4AAAAM/confused-confused-face.gif|confused confused face","CqTcYek3taEAAAAM/spongebob-spongebob-meme.gif|spongebob spongebob meme","UiVISJ4WhkAAAAAM/huh.gif|huh","UoMvZHm47MIAAAAM/huh-what.gif|huh what","e2SfQc6GqFAAAAAM/confusion.gif|confusion","iNkckUgsWNUAAAAM/excuse-me-what-excuse-me.gif|excuse me what excuse me","mknbzd2fKTwAAAAM/dog-confused.gif|dog confused","TZd4iI0rE2cAAAAM/ughhh.gif|ughhh","sCiYdyfTqjMAAAAM/little-kid-confused.gif|little kid confused","Ik-kMgjV-okAAAAM/cat-tired.gif|cat tired","-DAGvKJj7XoAAAAM/what-wait-what.gif|what wait what","ASAsHQNVvacAAAAM/midnight-the-cat-stopped-working-midnight-the-cat.gif|midnight the cat stopped working midnight the cat","tFP1wK9dWnsAAAAM/test.gif|test"],
+    "money":["z0b1kadflVMAAAAM/money-bands.gif|money bands","UuHswEH6oxUAAAAM/smol-smolcat.gif|smol smolcat","MojW2yr1vFoAAAAM/money-money-money.gif|money money money","K8ZxOY0X3acAAAAM/throwing-money-throwing-money-away.gif|throwing money throwing money away","uDYEWXNTnwEAAAAM/the-money-gamble.gif|the money gamble","6UFIaA5HSocAAAAM/mr-krabs-money.gif|mr krabs money","pIXBYIAYxDYAAAAM/money-show-me-the-money.gif|money show me the money","8HIMFKlv8ywAAAAM/money-money-money-cash-money.gif|money money money cash money","MQyZ9aSaJnAAAAAM/cat-box.gif|cat box","WnySzpmG8IkAAAAM/funny-money.gif|funny money","wJ_tw9MY_ZYAAAAM/kid-money.gif|kid money","1ZRdjeFqQRwAAAAM/money.gif|money","r53R8b0im3kAAAAM/hasbulla.gif|hasbulla","BU3g2AF5_VwAAAAM/money.gif|money"],
+    "run away":["7a6nH6l1Ym4AAAAM/kyoshi.gif|kyoshi","kReVPYNG9jMAAAAM/10.gif|10","Bx0dLGzr4K4AAAAM/fast-run-run.gif|fast run run","jxjE54b16q0AAAAM/sirseanyt-sirsean.gif|sirseanyt sirsean","TVWJWK8KoSMAAAAM/running-staring.gif|running staring","DwKuIso5yYcAAAAM/spencer-kristen-stewart.gif|spencer kristen stewart","8aVSI_3m_oAAAAAM/run-running.gif|run running","MTgmPCdZXNIAAAAM/squidward-running.gif|squidward running","LkrXhHyFaCwAAAAM/man-running.gif|man running","0DSB1Nm9Zk4AAAAM/scared-child.gif|scared child","u5Ufq1cHWewAAAAM/go.gif|go","8OW8xbVC4jQAAAAM/running-running-gif.gif|running running gif","YZS0hsJNMpcAAAAM/run-run-away.gif|run run away","18E7heYZR_AAAAAM/teletubbies-dipsy.gif|teletubbies dipsy"]
+  };
+
+    // Flatten once: {url, words} — words drive the search box filter.
+    var FLAT = [];
+    Object.keys(BUILT_IN_GIFS).forEach(function(cat){
+      BUILT_IN_GIFS[cat].forEach(function(entry){
+        var bits = entry.split('|');
+        FLAT.push({ url: CDN + bits[0], words: (cat + ' ' + (bits[1] || '')).toLowerCase() });
+      });
+    });
+
+    var btn=$('toolGif'), modal=$('gifModal'), input=$('gifSearchInput'),
+        results=$('gifResults'), msg=$('gifMsg'), tags=$('gifTags');
     if(!btn||!modal) return;
-    var searchTimer=null;
+    var searchTimer=null, reqSeq=0;
+
+    function paint(list, note){
+      results.innerHTML='';
+      if(!list.length){ msg.textContent='No GIFs for that — try another word.'; return; }
+      msg.textContent = note;
+      list.forEach(function(g){
+        var img=document.createElement('img');
+        img.className='gifThumb'; img.src=g.url; img.title='Send this GIF'; img.loading='lazy';
+        img.addEventListener('click', function(){ sendGif(g.url); });
+        results.appendChild(img);
+      });
+    }
+
+    // Deterministic spread across categories so the default view isn't 14 touchdowns.
+    function defaultMix(){
+      var cats=Object.keys(BUILT_IN_GIFS), out=[], round=0, added=true;
+      while(added && out.length < 36){
+        added=false;
+        for(var i=0;i<cats.length && out.length<36;i++){
+          var arr=BUILT_IN_GIFS[cats[i]];
+          if(round < arr.length){
+            var bits=arr[round].split('|');
+            out.push({ url: CDN + bits[0] }); added=true;
+          }
+        }
+        round++;
+      }
+      return out;
+    }
+
+    function builtInSearch(q){
+      if(!q) return defaultMix();
+      var terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+      return FLAT.filter(function(g){
+        return terms.every(function(t){ return g.words.indexOf(t) !== -1; });
+      }).slice(0, 48);
+    }
+
+    function showBuiltIn(q){
+      paint(builtInSearch(q), q ? 'Built-in pack — Powered by Tenor.' : 'Built-in pack — Powered by Tenor.');
+    }
+
     async function runSearch(q){
+      var seq = ++reqSeq;
+      if(!TENOR_ON){ showBuiltIn(q); return; }
       results.innerHTML=''; msg.textContent='Searching…';
       try{
         var url = q
-          ? 'https://tenor.googleapis.com/v2/search?q='+encodeURIComponent(q)+'&key='+TENOR_KEY+'&limit=18&media_filter=gif'
-          : 'https://tenor.googleapis.com/v2/featured?key='+TENOR_KEY+'&limit=18&media_filter=gif';
+          ? 'https://tenor.googleapis.com/v2/search?q='+encodeURIComponent(q)+'&key='+TENOR_KEY+'&limit=24&media_filter=tinygif,gif&client_key=latvian_thumbs'
+          : 'https://tenor.googleapis.com/v2/featured?key='+TENOR_KEY+'&limit=24&media_filter=tinygif,gif&client_key=latvian_thumbs';
         var res = await fetch(url);
         if(!res.ok) throw new Error('search failed');
         var data = await res.json();
-        var items = data.results || [];
-        if(!items.length){ msg.textContent='No GIFs found.'; return; }
-        msg.textContent='Powered by Tenor.';
-        items.forEach(function(it){
-          var formats = it.media_formats || {};
-          var full = formats.gif && formats.gif.url;
-          var thumb = (formats.tinygif || formats.nanogif || formats.gif || {}).url;
-          if(!full || !thumb) return;
-          var img=document.createElement('img');
-          img.className='gifThumb'; img.src=thumb; img.title='Send this GIF'; img.loading='lazy';
-          img.addEventListener('click', function(){ sendGif(full); });
-          results.appendChild(img);
-        });
-      }catch(e){ msg.textContent='GIF search is unavailable right now — try again in a bit.'; }
+        if(seq !== reqSeq) return;                    // a newer keystroke already won
+        var items = (data.results || []).map(function(it){
+          var f = it.media_formats || {};
+          var u = (f.tinygif || f.gif || {}).url;
+          return u ? { url:u } : null;
+        }).filter(Boolean);
+        if(!items.length){ showBuiltIn(q); return; }
+        paint(items, 'Powered by Tenor.');
+      }catch(e){
+        if(seq !== reqSeq) return;
+        showBuiltIn(q);                                // never leave the user stranded
+      }
     }
+
     async function sendGif(url){
       modal.classList.remove('open');
-      try{
-        await supabase.from('ff_chat_messages').insert({ room:ROOM, user_id:me.uid, screen_name:me.name, body:url, color:me.color });
-      }catch(e){ addHost('(GIF failed to send)'); }
+      var r = await supabase.from('ff_chat_messages')
+        .insert({ room:ROOM, user_id:me.uid, screen_name:me.name, body:url, color:me.color })
+        .select('id').single();
+      if(r.error){ addHost('(GIF failed to send — '+esc(r.error.message)+')'); return; }
+      if(r.data && r.data.id) selfPosted[r.data.id] = 1;
+      addMsg(me.name, me.color, url, false);
+      scroll();
     }
-    btn.addEventListener('click', function(){ modal.classList.add('open'); input.value=''; runSearch(''); input.focus(); });
+
+    // Tag chips — one-click browsing of the built-in pack.
+    Object.keys(BUILT_IN_GIFS).forEach(function(cat){
+      var b=document.createElement('button'); b.type='button'; b.textContent=cat;
+      b.addEventListener('click', function(){
+        input.value = cat;
+        [].forEach.call(tags.children, function(c){ c.setAttribute('aria-pressed', c===b ? 'true':'false'); });
+        runSearch(cat);
+      });
+      tags.appendChild(b);
+    });
+
+    btn.addEventListener('click', function(){
+      modal.classList.add('open'); input.value='';
+      [].forEach.call(tags.children, function(c){ c.setAttribute('aria-pressed','false'); });
+      runSearch(''); input.focus();
+    });
     $('closeGif').addEventListener('click', function(){ modal.classList.remove('open'); });
     modal.addEventListener('click', function(e){ if(e.target===modal) modal.classList.remove('open'); });
     input.addEventListener('input', function(){
       clearTimeout(searchTimer); var v=this.value;
-      searchTimer=setTimeout(function(){ runSearch(v); }, 400);
+      searchTimer=setTimeout(function(){ runSearch(v); }, 300);
     });
   })();
 
@@ -1193,7 +1348,7 @@
   var modal = $('modal');
   $('joinlink').textContent = JOIN_URL;
   function inviteText(){ return '🏈 You\'re invited to Latvian Thumbs — the league chat, old-school AOL style. Sign in with your Google or Microsoft email and you\'re in: '+JOIN_URL; }
-  $('inviteBtn').addEventListener('click', function(){ modal.classList.add('open'); });
+  $('inviteBtn').addEventListener('click', function(){ modal.classList.add('open'); loadRoster(); });
   $('closeInvite').addEventListener('click', function(){ modal.classList.remove('open'); });
   $('okInvite').addEventListener('click', function(){ modal.classList.remove('open'); });
   modal.addEventListener('click', function(e){ if(e.target===modal) modal.classList.remove('open'); });
@@ -1207,6 +1362,111 @@
   $('shareNative').addEventListener('click', function(){
     if(navigator.share){ navigator.share({ title:'League Lobby', text:inviteText(), url:JOIN_URL }).catch(function(){}); }
     else { copy(inviteText(), this, 'Copied — paste it!'); } });
+
+  /* ---------- roster mail-out (commissioner only) ----------
+     Reads the live roster through the ff_roster() SECURITY DEFINER function.
+     ff_chat_allowlist still has no select policy, and ff_roster() returns zero
+     rows unless is_ff_admin() passes — so a non-commissioner who opens this
+     dialog just gets the plain share buttons and never sees an address.
+     Everything sends through the user's own mail app via mailto: (group sends
+     are BCC), so there's no mail server, no API key, and nothing to configure. */
+  var ROSTER = [];
+  function firstName(m){
+    var lbl = (m.label || '').trim();
+    if(lbl && lbl.indexOf('@') === -1) return lbl.split(/\s+/)[0];
+    return (m.email.split('@')[0].split(/[._-]/)[0] || 'there').replace(/^./, function(c){ return c.toUpperCase(); });
+  }
+  function mailtoLink(opts){
+    var qs = [];
+    if(opts.bcc)     qs.push('bcc='   + encodeURIComponent(opts.bcc));
+    if(opts.subject) qs.push('subject='+ encodeURIComponent(opts.subject));
+    if(opts.body)    qs.push('body='  + encodeURIComponent(opts.body));
+    return 'mailto:' + encodeURIComponent(opts.to || '') + (qs.length ? '?' + qs.join('&') : '');
+  }
+  function blastBody(greeting){
+    return greeting + '\n\n' +
+      'The league chat room is up — Latvian Thumbs, AOL style, same as it ever was.\n\n' +
+      JOIN_URL + '\n\n' +
+      'Sign in with the Google or Microsoft account for THIS email address (the one this came to) ' +
+      'and you\'re straight in. No password to make, no app to install.\n\n' +
+      'See you in there.\n— ' + (me.name || 'Gowa');
+  }
+  function renderRoster(){
+    var list = $('rosterList'); list.innerHTML = '';
+    var missing = ROSTER.filter(function(m){ return !m.joined; });
+    $('rosterCount').textContent = (ROSTER.length - missing.length) + ' in · ' + missing.length + ' not yet';
+    $('mailMissingLabel').textContent = missing.length
+      ? 'Email the ' + missing.length + ' who aren\'t in yet'
+      : 'Everybody\'s already in 🎉';
+    $('mailMissing').disabled = !missing.length;
+    $('mailAllLabel').textContent = 'Email the whole league (' + ROSTER.length + ')';
+
+    ROSTER.forEach(function(m){
+      var row = document.createElement('div'); row.className = 'rosterRow';
+      var who = document.createElement('div'); who.className = 'rosterWho';
+      var nm  = document.createElement('div'); nm.className = 'rosterName';
+      nm.textContent = (m.label && m.label.indexOf('@') === -1) ? m.label : m.email.split('@')[0];
+      var em  = document.createElement('div'); em.className = 'rosterMail'; em.textContent = m.email;
+      who.appendChild(nm); who.appendChild(em);
+
+      var tag = document.createElement('span');
+      tag.className = 'rosterTag ' + (m.joined ? 'in' : 'out');
+      tag.textContent = m.joined ? 'in' : 'not yet';
+
+      var b = document.createElement('button');
+      b.className = 'btn'; b.type = 'button'; b.textContent = 'Email';
+      b.title = 'Email ' + m.email + ' on their own';
+      b.addEventListener('click', function(){
+        location.href = mailtoLink({
+          to: m.email,
+          subject: 'Get in the league chat',
+          body: blastBody('Hey ' + firstName(m) + ' —')
+        });
+      });
+
+      row.appendChild(who); row.appendChild(tag); row.appendChild(b);
+      list.appendChild(row);
+    });
+  }
+  async function loadRoster(){
+    if(!IS_ADMIN) return;                       // non-commissioners: section stays hidden
+    $('rosterWrap').hidden = false;
+    if(ROSTER.length){ renderRoster(); return; }
+    $('rosterCount').textContent = 'Loading…';
+    var { data, error } = await supabase.rpc('ff_roster');
+    if(error || !data || !data.length){
+      $('rosterCount').textContent = error ? 'Could not load roster' : 'Roster unavailable';
+      return;
+    }
+    ROSTER = data;
+    renderRoster();
+  }
+  // The sender goes in To: (some mail apps refuse an empty To:) and is dropped
+  // from BCC so they don't get a second copy of their own blast.
+  function bccList(members){
+    return members.map(function(m){ return m.email; })
+      .filter(function(e){ return e.toLowerCase() !== (me.email||'').toLowerCase(); })
+      .join(',');
+  }
+  $('mailMissing').addEventListener('click', function(){
+    var missing = ROSTER.filter(function(m){ return !m.joined; });
+    if(!missing.length) return;
+    location.href = mailtoLink({
+      to: me.email,
+      bcc: bccList(missing),
+      subject: 'You\'re missing the league chat',
+      body: blastBody('Fellas —')
+    });
+  });
+  $('mailAll').addEventListener('click', function(){
+    if(!ROSTER.length) return;
+    location.href = mailtoLink({
+      to: me.email,
+      bcc: bccList(ROSTER),
+      subject: 'League chat is live',
+      body: blastBody('Fellas —')
+    });
+  });
 
   /* ---------- mute + sign off + clock ---------- */
   $('muteBtn').addEventListener('click', function(){ muted=!muted; this.setAttribute('aria-pressed',String(muted));
