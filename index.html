@@ -1010,11 +1010,13 @@
     ac(); input.focus();
 
     // history
+    // Newest 300, then flipped back to chronological — loading the OLDEST 300
+    // would hide recent messages once the room has more history than the limit.
     var { data, error } = await supabase.from('ff_chat_messages')
       .select('screen_name,body,color,created_at,bot').eq('room',ROOM)
-      .order('created_at',{ascending:true}).limit(300);
+      .order('created_at',{ascending:false}).limit(300);
     if(error){ addHost('(could not load history — '+esc(error.message)+')'); }
-    else { (data||[]).forEach(function(m){ addMsg(m.screen_name,m.color,m.body,m.bot); }); scroll(); }
+    else { (data||[]).slice().reverse().forEach(function(m){ addMsg(m.screen_name,m.color,m.body,m.bot); }); scroll(); }
     addHost('*** You have entered the room "'+ (ROOM==='league'?'Latvian Thumbs':ROOM) +'" ***');
     sndOpen();
     setTimeout(sndMail, 220);
