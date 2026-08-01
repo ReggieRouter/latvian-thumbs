@@ -486,6 +486,13 @@
     auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
   });
   async function getSession(){ const { data:{ session } } = await supabase.auth.getSession(); return session; }
+  // ff_chat_messages RLS is scoped `to authenticated`, and Realtime evaluates
+  // those policies against the socket's own JWT — not the REST one. Without
+  // this the socket stays anon, every change event is filtered out server-side,
+  // and messages only show up on refresh. Re-applied on refresh/sign-in too.
+  supabase.auth.onAuthStateChange(function(_evt, session){
+    if(session && session.access_token){ try{ supabase.realtime.setAuth(session.access_token); }catch(e){} }
+  });
   async function signOut(){ try{ await supabase.auth.signOut(); }catch(e){} location.reload(); }
 
   "use strict";
@@ -649,6 +656,9 @@
 
   /* ---------- send ---------- */
   var input = $('input');
+  // Ids rendered locally on send, so the realtime echo of our own message is
+  // skipped instead of drawing it twice.
+  var selfPosted = {};
   async function send(){
     var v = input.value.trim(); if(!v) return;
     input.value='';
@@ -659,11 +669,15 @@
       catch(e){ addHost('(the 8-ball is stuck — try again)'); }
       return;
     }
-    var { error } = await supabase.from('ff_chat_messages').insert({
+    // Render our own line immediately rather than waiting on the realtime echo,
+    // so a slow or dropped socket never makes it look like the message vanished.
+    var { data, error } = await supabase.from('ff_chat_messages').insert({
       room:ROOM, user_id:me.uid, screen_name:me.name, body:v, color:me.color
-    });
-    if(error){ addHost('(message failed to send — '+esc(error.message)+')'); input.value=v; }
-    // rendered when the realtime INSERT echoes back (to everyone, incl. me)
+    }).select('id').single();
+    if(error){ addHost('(message failed to send — '+esc(error.message)+')'); input.value=v; return; }
+    if(data && data.id) selfPosted[data.id] = 1;
+    addMsg(me.name, me.color, v, false);
+    scroll();
   }
   $('sendBtn').addEventListener('click', send);
   input.addEventListener('keydown', function(e){ if(e.key==='Enter') send(); });
@@ -1037,11 +1051,22 @@
     loadContacts();
 
     // realtime: messages + presence on one channel
+    // Apply the session JWT to the socket before subscribing — the RLS policies
+    // on ff_chat_messages are `to authenticated`, so an anon socket receives
+    // nothing at all.
+    try{
+      var rtSess = await getSession();
+      if(rtSess && rtSess.access_token) await supabase.realtime.setAuth(rtSess.access_token);
+    }catch(e){}
     channel = supabase.channel('ff-room-'+ROOM, { config:{ presence:{ key: me.email } } });
     channel
       .on('postgres_changes',
         { event:'INSERT', schema:'public', table:'ff_chat_messages', filter:'room=eq.'+ROOM },
-        function(payload){ var m=payload.new; addMsg(m.screen_name,m.color,m.body,m.bot); sndIM(); })
+        function(payload){
+          var m=payload.new;
+          if(m.id && selfPosted[m.id]){ delete selfPosted[m.id]; return; }  // already drawn on send
+          addMsg(m.screen_name,m.color,m.body,m.bot); sndIM();
+        })
       .on('postgres_changes',
         { event:'INSERT', schema:'public', table:'ff_chat_join_requests' },
         function(payload){ if(IS_ADMIN){ addHost('📨 New join request from '+payload.new.email); refreshReqBadge(); } })
