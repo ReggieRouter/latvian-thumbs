@@ -323,23 +323,25 @@ select cron.schedule('ff-bot-lars',   '0 18 * * *',  'select public.ff_bot_lars(
 select cron.schedule('ff-bot-remind', '0 21 * * *',  'select public.ff_bot_reminder()');
 
 -- ── seed the league roster ───────────────────────────────────────────────────
--- Stored lowercase (is_ff_member() lower()s both sides, so case never matters,
--- and lowercase avoids case-variant duplicate PK rows). Re-run this file after
--- any roster change; existing rows are left untouched.
-insert into public.ff_chat_allowlist (email, label) values
-  ('matthew.e.dorfman@gmail.com', 'Matthew Dorfman'),
-  ('jfcamacho83@gmail.com',       'J Camacho'),
-  ('michael.j.camacho@gmail.com', 'Michael Camacho'),
-  ('rosenhjp@gmail.com',          'Rosen'),
-  ('stephengowa@gmail.com',       'Stephen'),
-  ('anthony.velli@gmail.com',     'Anthony Velli'),
-  ('jonathanmootz@gmail.com',     'Jonathan Mootz'),
-  ('joseph.pepe@gmail.com',       'Joseph Pepe'),
-  ('matthewsierra@gmail.com',     'Matthew Sierra'),
-  ('mr.economou@gmail.com',       'Economou'),
-  ('tedmootz@gmail.com',          'Ted Mootz'),
-  ('teddylj@gmail.com',           'Teddy')
-on conflict (email) do nothing;
+-- The roster USED to be a literal list of the league's personal Gmail addresses,
+-- committed to a public GitHub repo. That is twelve real people's contact
+-- details published for any scraper to harvest, and it also handed an attacker
+-- the exact set of accounts worth going after. It has been removed.
+--
+-- The roster now lives only in the database. Add people either from the app
+-- (commissioner → 🔔 Requests → Approve, which is the normal path), or by
+-- running a one-off statement locally that is NOT committed:
+--
+--   insert into public.ff_chat_allowlist (email, label)
+--   values (lower('someone@example.com'), 'Their Name')
+--   on conflict (email) do nothing;
+--
+-- Store emails lowercase — is_ff_member() lower()s both sides, so case never
+-- matters, and lowercase avoids case-variant duplicate primary-key rows.
+--
+-- To see the current roster (service role / SQL editor only — there is
+-- deliberately no client SELECT policy on this table):
+--   select email, label, added_at from public.ff_chat_allowlist order by added_at;
 
 -- verify: select count(*) from public.ff_chat_messages;
 --         select email, label from public.ff_chat_allowlist order by added_at;

