@@ -582,7 +582,7 @@
         d.innerHTML='OnlineHost:&nbsp; <span class="txt">'+esc(e.text)+'</span>';
       } else {
         d.className='msg';
-        var tag = e.isBot ? '<span class="botTag">BOT</span> ' : '';
+        var tag = '';
         var bodyHtml = isImageUrl(e.text)
           ? '<img class="gifMsg" src="'+esc(e.text.trim())+'" alt="GIF" loading="lazy">'
           : linkify(formatText(esc(e.text)));
