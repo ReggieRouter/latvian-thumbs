@@ -30,7 +30,10 @@ const CORS = {
 
 const ROOM = 'league';
 const MODEL = Deno.env.get('FF_BOT_MODEL') || 'claude-sonnet-5';
-const VENMO = Deno.env.get('FF_VENMO_HANDLE') || '@Steve-Gowa';
+// Deliberately no handle by default — a wrong one is worse than none, and the
+// league knows who Steve is. Set FF_VENMO_HANDLE to append a real one.
+const VENMO_HANDLE = Deno.env.get('FF_VENMO_HANDLE') || '';
+const VENMO = VENMO_HANDLE ? ' — ' + VENMO_HANDLE : '';
 const MONTHLY_CAP_USD = Number(Deno.env.get('FF_BOT_MONTHLY_CAP') || '10');
 
 // Claude Sonnet 5 standard list price, $ per million tokens. Deliberately NOT
@@ -158,7 +161,7 @@ serve(async (req) => {
       await postHost(
         `*** ${liveHumans} of you are actually in here, so the bots are shutting up — ` +
         `you don't need them and they cost Steve real money to run. ` +
-        `Venmo him if you want them back on the quiet nights: ${VENMO} ***`,
+        `Venmo him if you want them back on the quiet nights${VENMO}. ***`,
       );
       await db.from('ff_bot_state').update({ last_crowd_nag_at: new Date().toISOString() }).eq('id', 1);
     }
@@ -170,7 +173,7 @@ serve(async (req) => {
     if (since(state.last_cap_nag_at) > CAP_NAG_EVERY_MS) {
       await postHost(
         `*** That's the whole $${MONTHLY_CAP_USD} of bot budget for the month. ` +
-        `The boys go quiet until the 1st. Venmo Steve to wake them up early: ${VENMO} ***`,
+        `The boys go quiet until the 1st. Venmo Steve to wake them up early${VENMO}. ***`,
       );
       await db.from('ff_bot_state').update({ last_cap_nag_at: new Date().toISOString() }).eq('id', 1);
     }

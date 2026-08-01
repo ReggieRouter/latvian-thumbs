@@ -573,9 +573,6 @@
   // Standalone build — its own Supabase client, no LendPaper code. localStorage is
   // per-origin, so this shares NOTHING with any other site's auth session.
   import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-  // Where the "the bots cost money" nags point people. Keep in sync with the
-  // FF_VENMO_HANDLE secret on the ff-bot-reply function.
-  const VENMO_HANDLE = '@Steve-Gowa';
   const SUPABASE_URL = 'https://arpquyoucdsdmbetgftj.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_R18l5zBtRQ1CkSGNBkgZkg_dVVBldlb';
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -1670,7 +1667,7 @@
       if(!s || !s.capped){ bar.hidden = true; return; }
       $('botBannerText').textContent =
         'The bots have burned through this month’s $' + Number(s.usd_cap).toFixed(0) +
-        ' and are off until the 1st. Venmo Steve if you want them back sooner — ' + VENMO_HANDLE;
+        ' and are off until the 1st. Venmo Steve if you want them back sooner.';
       bar.hidden = false;
     }catch(e){ /* banner is decoration; never let it break the room */ }
   }
