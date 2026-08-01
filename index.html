@@ -592,10 +592,12 @@
     });
     if(stick) scroll();
   }
-  function addMsg(name,color,text,isBot){
+  // defer=true buffers without re-rendering — the bulk history load renders once
+  // at the end instead of rebuilding the whole log on every single message.
+  function addMsg(name,color,text,isBot,defer){
     allEntries.push({ type:'msg', name:name, color:color, text:text, isBot:!!isBot, lang:detectLang(text) });
     updateSenderOptions(name);
-    renderLog();
+    if(!defer) renderLog();
   }
   function addHost(text){
     allEntries.push({ type:'host', text:text });
@@ -1010,13 +1012,21 @@
     ac(); input.focus();
 
     // history
-    // Newest 300, then flipped back to chronological — loading the OLDEST 300
-    // would hide recent messages once the room has more history than the limit.
-    var { data, error } = await supabase.from('ff_chat_messages')
-      .select('screen_name,body,color,created_at,bot').eq('room',ROOM)
-      .order('created_at',{ascending:false}).limit(300);
-    if(error){ addHost('(could not load history — '+esc(error.message)+')'); }
-    else { (data||[]).slice().reverse().forEach(function(m){ addMsg(m.screen_name,m.color,m.body,m.bot); }); scroll(); }
+    // FULL history — paged, never truncated. PostgREST caps a single response
+    // (1000 rows by default), so keep pulling until a short page comes back.
+    // Messages are buffered with defer=true and rendered once at the end.
+    var PAGE = 1000, from = 0, loaded = 0;
+    for(;;){
+      var { data, error } = await supabase.from('ff_chat_messages')
+        .select('screen_name,body,color,created_at,bot').eq('room',ROOM)
+        .order('created_at',{ascending:true}).range(from, from + PAGE - 1);
+      if(error){ addHost('(could not load history — '+esc(error.message)+')'); break; }
+      (data||[]).forEach(function(m){ addMsg(m.screen_name,m.color,m.body,m.bot,true); });
+      loaded += (data||[]).length;
+      if(!data || data.length < PAGE) break;
+      from += PAGE;
+    }
+    renderLog(); scroll();
     addHost('*** You have entered the room "'+ (ROOM==='league'?'Latvian Thumbs':ROOM) +'" ***');
     sndOpen();
     setTimeout(sndMail, 220);
