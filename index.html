@@ -15,6 +15,9 @@
 <meta property="og:type" content="website" />
 <meta name="twitter:card" content="summary" />
 <meta name="robots" content="noindex, nofollow" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <style>
   :root{
     --face:#c0c0c0; --face-lite:#dfdfdf; --hi:#ffffff; --sh:#808080; --dk:#000000;
@@ -210,6 +213,11 @@
   .botBanner{ display:flex; align-items:center; gap:7px; padding:5px 9px; font-size:11.5px;
     background:linear-gradient(#ffe9a8,#ffd561); border-top:1px solid #fff3cf;
     border-bottom:1px solid var(--sh); color:#4a3800; }
+  /* An author `display` on a class beats the UA stylesheet's [hidden]{display:none} —
+     without this, `bar.hidden = true` in JS is silently ignored and the bar renders
+     as an empty flex strip showing only the icon. This is the actual root cause of
+     the "random 💸 banner" report, not a caching artifact. */
+  .botBanner[hidden]{ display:none; }
   .botBannerIcon{ font-size:14px; flex:0 0 auto; }
   .muted{ color:#666; font-size:11px; }
 
@@ -1572,6 +1580,7 @@
   }
 
   var PARODY_ADS = [
+    { kicker:'New Feature', head:'GIFS ARE LIVE!', sub:'Hit the 🎬 GIF button and say what you really mean. 420 to choose from, zero setup.', cta:'Try the GIF Button' },
     { kicker:'America Online', head:'ALL-NEW LATVIAN THUMBS 7.0!', sub:'Now with 3 members who actually respond. Free trial: 1000 hours of Gowa ignoring your trade.', cta:'Order the CD' },
     { kicker:'Limited Time', head:'50 FREE HOURS', sub:'Of arguing about keeper inflation. No credit card. No resolution.', cta:'Call 1-800-KEEPER' },
     { kicker:'Nationwide Sale', head:'DUES — JUST $50', sub:'Was also $50 last year. And you still have not paid it.', cta:'Venmo Now' },
@@ -1661,12 +1670,18 @@
 
   async function refreshBotBanner(){
     var bar = $('botBanner'); if(!bar) return;
+    bar.hidden = true;                              // default-safe on every call, error or not
     try{
       var r = await supabase.rpc('ff_bot_status');
       var s = Array.isArray(r.data) ? r.data[0] : r.data;
-      if(!s || !s.capped){ bar.hidden = true; return; }
+      if(!s) return;
+      // Belt-and-suspenders: trust the actual numbers, not just the boolean —
+      // a banner that shows with $0 spent against a $10 cap is worse than one
+      // that occasionally stays hidden a beat too long.
+      var spent = Number(s.usd_spent), cap = Number(s.usd_cap);
+      if(!(s.capped === true && isFinite(spent) && isFinite(cap) && spent >= cap)) return;
       $('botBannerText').textContent =
-        'The bots have burned through this month’s $' + Number(s.usd_cap).toFixed(0) +
+        'The bots have burned through this month’s $' + cap.toFixed(0) +
         ' and are off until the 1st. Venmo Steve if you want them back sooner.';
       bar.hidden = false;
     }catch(e){ /* banner is decoration; never let it break the room */ }
