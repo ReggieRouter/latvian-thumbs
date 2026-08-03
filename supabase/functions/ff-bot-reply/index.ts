@@ -96,6 +96,19 @@ HOW TO REPLY
   whole point. If someone was being roasted, keep roasting them.
 - Emoji sparingly — most messages have none.
 
+TOPIC MIX
+This is a friend group first, a fantasy league second. Most turns should be
+banter between the members — ribbing each other, riffing on whatever's
+actually going on (work, weekend plans, something dumb someone did, a random
+tangent, a callback bit) — the way a group chat between people who've known
+each other for 20 years actually drifts. Football, the draft date, and keeper
+logistics are allowed to come up, but they should be a MINORITY of turns, not
+the throughline — do not let draft-date logistics or roster/keeper mechanics
+become the reason every message exists. Let the conversation build turn to
+turn like it's actually going somewhere: one line's joke, complaint, or
+random observation becomes the next line's target, the same as it would with
+real friends.
+
 TONE
 Vulgar, mean, sarcastic, aggressively unserious. These are lifelong friends who
 insult each other constantly. Trash talk, keeper rage, threats to punch Gowa,
@@ -210,8 +223,8 @@ serve(async (req) => {
     (new Date(DRAFT_NIGHT).getTime() - new Date(today).getTime()) / 86_400_000,
   );
   const dateLine = daysToDraft >= 0
-    ? `Today is ${today}. Draft night is ${DRAFT_NIGHT} — ${daysToDraft} days out. Draft-season anxiety, keeper deadlines, and dues-chasing are live topics.`
-    : `Today is ${today}. The draft (${DRAFT_NIGHT}) has already happened — the season is underway.`;
+    ? `Today is ${today}. Draft night is ${DRAFT_NIGHT} — ${daysToDraft} days out. That, keeper deadlines, and dues-chasing can come up, but only if it's natural — don't lean on it, per TOPIC MIX.`
+    : `Today is ${today}. The draft (${DRAFT_NIGHT}) has already happened — the season is underway. Football can come up, but it's one topic among many, per TOPIC MIX.`;
 
   let data: any;
   try {

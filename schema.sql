@@ -342,10 +342,11 @@ begin
 end $fn$;
 
 -- schedules (UTC; idempotent — re-running updates the job by name)
-select cron.schedule('ff-bot-matt',   '0 14 * * *',  'select public.ff_bot_matt()');
-select cron.schedule('ff-bot-joe',    '30 15 * * *', 'select public.ff_bot_joe()');
-select cron.schedule('ff-bot-lars',   '0 18 * * *',  'select public.ff_bot_lars()');
-select cron.schedule('ff-bot-remind', '0 21 * * *',  'select public.ff_bot_reminder()');
+-- Nightly cadence pushed back an hour (was 14:00/15:30/18:00/21:00 UTC).
+select cron.schedule('ff-bot-matt',   '0 15 * * *',  'select public.ff_bot_matt()');
+select cron.schedule('ff-bot-joe',    '30 16 * * *', 'select public.ff_bot_joe()');
+select cron.schedule('ff-bot-lars',   '0 19 * * *',  'select public.ff_bot_lars()');
+select cron.schedule('ff-bot-remind', '0 22 * * *',  'select public.ff_bot_reminder()');
 
 -- ── seed the league roster ───────────────────────────────────────────────────
 -- Stored lowercase (is_ff_member() lower()s both sides, so case never matters,
