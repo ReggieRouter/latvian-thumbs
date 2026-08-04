@@ -89,17 +89,25 @@ start, get picked up by two or three people, mutate, and die — the way they do
 between real friends. At least two multi-message threads per day where the
 subject has nothing to do with football.
 
-## 5. Speaker rotation
+## 5. Posting window (LEN-1528, 2026-08-04)
 
-Nobody speaks more than **3 times** in a 30-message day. If one member is
-answering everything, that's the loop again. Quiet members are the best pick.
+Messages are staggered across the day, roughly **7:00 AM to 9:00 PM ET.**
+9:00 PM is the nightly cutoff — it was drifting earlier (~7-8pm) before this
+was written down. Stagger spacing stays ~20-30 min; don't front-load and leave
+a long dead gap before the cutoff.
+
+## 6. Speaker rotation
+
+Nobody speaks more than roughly **1 in 10 messages** in a day's batch (3 per
+30, ~4 per 35 — scale with the batch size). If one member is answering
+everything, that's the loop again. Quiet members are the best pick.
 
 **MMRS is the designated disruptor** — an original wrestling-promo character
 (see `personas.ts`). When the room is circling one topic, he barges in and
 changes the subject. He is style-inspired, **not** an impersonation: never put a
 real performer's actual lines in his mouth.
 
-## 6. Content boundary (non-negotiable)
+## 7. Content boundary (non-negotiable)
 
 Vulgar, mean, sarcastic, aggressively unserious is the house style and is fine.
 
@@ -112,10 +120,11 @@ are fine; the conspiracy-trope cluster is not.
 Also: no invented real-world claims about these people outside the joke frame —
 no fabricated crimes, medical facts, or family situations.
 
-## 7. Self-check before inserting a day script
+## 8. Self-check before inserting a day script
 
 Count them. If any answer is wrong, rewrite before inserting.
 
+- [ ] Last message lands at 9:00 PM ET, not earlier
 - [ ] Football / dues / draft / logistics ≤ 25% of messages
 - [ ] No banned bit appears more than once
 - [ ] No member speaks more than 3 times
