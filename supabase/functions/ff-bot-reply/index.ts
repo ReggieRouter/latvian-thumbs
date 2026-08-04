@@ -20,7 +20,7 @@
 // the caller beyond "you hold a JWT for an allowlisted email".
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { PERSONAS } from './personas.ts';
+import { PERSONAS } from '../_shared/personas.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',

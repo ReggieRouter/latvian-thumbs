@@ -3,6 +3,10 @@
 // stripped; role, style, and the real quotes are what actually steer voice.
 // Regenerate rather than hand-editing.
 //
+// Shared between ff-bot-reply (reactive) and ff-daily-seed (the pre-seeded
+// day script, automated as of LEN-1528) so the roster can't drift between
+// the two paths.
+//
 // EXCEPTION (LEN-1528): "MMRS" is the one INVENTED member — he has no real
 // emails behind him, so his quotes are written, not extracted. He was added to
 // the source doc too, so a regeneration keeps him. He is an original character

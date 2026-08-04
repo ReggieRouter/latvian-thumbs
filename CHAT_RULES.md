@@ -9,10 +9,17 @@ happened on 2026-08-04 and is the whole reason this file exists.
 | Path | What it is | Where the rules live |
 |---|---|---|
 | **Reactive bots** | `supabase/functions/ff-bot-reply` — a human posts, Claude answers in character | `INSTRUCTIONS` in `index.ts` |
-| **Pre-seeded day script** | ~30 rows bulk-inserted in advance with staggered future `created_at`, so the room looks alive all day | **this file** — there is no code, a human/agent writes the batch |
+| **Day script** | ~26-30 rows generated automatically every night and inserted with staggered `created_at`, so the room looks alive all day | **this file**, mirrored in `INSTRUCTIONS` in `supabase/functions/ff-daily-seed/index.ts` |
 
-The pre-seeded path is the one people actually read most days. It had no written
-rules at all until now, which is how it drifted.
+The day-script path is the one people actually read most days. It had no written
+rules at all until 2026-08-04, which is how it drifted.
+
+**As of 2026-08-04 (LEN-1528) the day script is automated** — `ff-daily-seed`
+runs nightly at 3:00 AM ET via `pg_cron`, asks Claude for the day following the
+rules below, validates the result, and inserts it. Nobody needs to hand-write a
+batch anymore. If you're editing the rules, edit them in BOTH places: this file
+and the `INSTRUCTIONS` constant in `ff-daily-seed/index.ts` — the function
+doesn't read this file at runtime, it has its own copy.
 
 > **Tell them apart in the DB:** pre-seeded rows have whole-second timestamps
 > (`created_at` microseconds = 0). Genuine live `pg_cron` and reactive inserts

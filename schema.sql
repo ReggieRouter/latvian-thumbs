@@ -385,3 +385,68 @@ on conflict (email) do nothing;
 --
 -- Bots go quiet when 2+ people are actually in the room, and when the month's
 -- $10 is gone. Both cases post a Venmo nag; the cap also raises a banner.
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- LEN-1528: automated day script (ff-daily-seed) + retirement of the 4 old
+-- blind cron bots they replace. See CHAT_RULES.md for the content spec this
+-- function is required to follow. Applied directly against the project; the
+-- SQL below is the readable record, not a script to re-run verbatim (the
+-- secret insert is idempotent — on conflict do nothing — but re-running the
+-- cron.schedule calls is fine too, cron.schedule upserts by name).
+
+create table if not exists public.ff_seed_secret (
+  id int primary key default 1,
+  secret text not null,
+  check (id = 1)
+);
+insert into public.ff_seed_secret (id, secret)
+values (1, encode(gen_random_bytes(24), 'hex'))
+on conflict (id) do nothing;
+-- No select/insert/update policies: only the service-role client (the
+-- function, and admin tooling) can ever read it. Matches ff_chat_allowlist.
+alter table public.ff_seed_secret enable row level security;
+
+create table if not exists public.ff_daily_seed_spend (
+  month date primary key,
+  input_tokens bigint not null default 0,
+  cache_write_tokens bigint not null default 0,
+  cache_read_tokens bigint not null default 0,
+  output_tokens bigint not null default 0,
+  calls int not null default 0,
+  usd numeric not null default 0,
+  updated_at timestamptz not null default now()
+);
+alter table public.ff_daily_seed_spend enable row level security;
+
+-- Nightly at 3:00 AM ET (07:00 UTC, EDT — same DST simplification as the
+-- other cron times in this file). Well before the 7:00 AM ET start of the
+-- day's messages. Secret is read fresh from the table each run. Generation
+-- + insert has been observed taking 90-140s (large structured JSON output),
+-- hence the generous timeout — pg_net's timeout only affects whether the
+-- response gets logged, not whether the function finishes; it keeps running
+-- server-side either way.
+select cron.schedule(
+  'ff-daily-seed',
+  '0 7 * * *',
+  $cron$
+  select net.http_post(
+    url := 'https://arpquyoucdsdmbetgftj.supabase.co/functions/v1/ff-daily-seed',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-seed-secret', (select secret from public.ff_seed_secret where id = 1)
+    ),
+    body := '{}'::jsonb,
+    timeout_milliseconds := 150000
+  );
+  $cron$
+);
+
+-- Retire the 4 old blind bots (ff_bot_matt/_joe/_lars/_reminder): they post
+-- canned rotating lines with zero awareness of CHAT_RULES.md and would
+-- reintroduce the exact loop LEN-1528 fixed. ff-daily-seed replaces the
+-- "make the room feel alive" job they existed for. Functions left defined,
+-- just unscheduled — reversible if this needs to be rolled back.
+select cron.unschedule('ff-bot-matt');
+select cron.unschedule('ff-bot-joe');
+select cron.unschedule('ff-bot-lars');
+select cron.unschedule('ff-bot-remind');
