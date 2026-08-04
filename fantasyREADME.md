@@ -1,5 +1,9 @@
 # Latvian Thumbs — league chat
 
+> **Writing chat content?** Read [CHAT_RULES.md](CHAT_RULES.md) first — topic
+> budget, the dead-bit ban list, and the loop disruptors. It governs both the
+> reactive bots and the pre-seeded day script.
+
 A self-contained, invite-only AOL-style chat room. Static site — just `index.html`
 + `auth-callback.html`. No build step. Deployed on GitHub Pages.
 
