@@ -36,7 +36,13 @@ const OFF_MATRIX_ALLOWLIST = new Set(['Mike Coppinger', 'Justin Maneri']);
 
 const WINDOW_START_MIN = 0;    // 7:00 AM ET
 const WINDOW_END_MIN = 840;    // 9:00 PM ET — see CHAT_RULES.md §5
-const TARGET_MESSAGE_COUNT = '26 to 30';
+// LEN-1593: was '26 to 30'. A day that size takes >150s to generate and the
+// edge runtime hard-stops a request at 150s (streaming keepalives do NOT
+// extend it — a streamed attempt returned 200 with nothing but keepalive
+// bytes). A shorter day that actually gets written every night beats a longer
+// one that never runs. Raise this only alongside a generation path that is not
+// bound by the 150s request ceiling.
+const TARGET_MESSAGE_COUNT = '20 to 24';
 
 function json(code: number, obj: unknown): Response {
   return new Response(JSON.stringify(obj), {
@@ -416,23 +422,6 @@ serve(async (req) => {
     }
   }
 
-  // ---- Generate, audit, retry once on content violations ----
-  let clean: any[] = [];
-  let violations: string[] = [];
-  let attempts = 0;
-
-  for (attempts = 1; attempts <= 2; attempts++) {
-    const res = await generate(attempts === 1 ? null : violations.map((v) => `  • ${v}`).join('\n'));
-    if (res.fatal) {
-      await recordSpend();
-      return json(200, { skipped: res.fatal, usd: totalUsd.toFixed(5), attempts });
-    }
-    clean = res.clean;
-    violations = auditDay(clean);
-    if (!violations.length) break;
-    console.warn('seed_audit_failed', `attempt ${attempts}`, JSON.stringify(violations));
-  }
-
   async function recordSpend() {
     await db.from('ff_daily_seed_spend').upsert({
       month,
@@ -446,65 +435,113 @@ serve(async (req) => {
     });
   }
 
-  await recordSpend();
+  // ---- Generate, audit, enforce, insert (streamed) ----
+  // LEN-1593 sizing note, learned the hard way. The edge runtime kills a
+  // request after 150s WITHOUT SENT BYTES:
+  //   {"code":"IDLE_TIMEOUT","message":"Request idle timeout limit (150s) reached"}
+  // A full day's generation now runs past that, so the plain request died at
+  // 150s having already force-cleared the date - i.e. it deleted a day and
+  // wrote nothing. Moving the work to a waitUntil background task did not help
+  // either: 202 returned, then no spend and no rows 7 minutes later.
+  //
+  // The limit is on IDLE time, not total time. So we answer with a streamed
+  // body and push a space every 10s while the work runs. Leading whitespace is
+  // legal JSON, so callers can still JSON.parse the final payload unchanged.
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      controller.enqueue(encoder.encode(' '));           // start the response now
+      const keepalive = setInterval(() => {
+        try { controller.enqueue(encoder.encode(' ')); } catch (_) { /* closed */ }
+      }, 10_000);
 
-  // Still dirty after the retry: strip repeat offenders rather than post a
-  // looping day or post nothing at all.
-  if (violations.length) {
-    const before = clean.length;
-    clean = dropRepeatBits(clean);
-    console.error(
-      'seed_audit_unfixed', JSON.stringify(violations),
-      `— trimmed ${before - clean.length} repeat-bit messages before posting`,
-    );
-  }
+      const finish = (payload: unknown) => {
+        clearInterval(keepalive);
+        try { controller.enqueue(encoder.encode(JSON.stringify(payload))); } catch (_) { /* closed */ }
+        controller.close();
+      };
 
-  if (clean.length < 15) {
-    // Too much got filtered out to trust the batch — skip rather than post a
-    // thin, malformed day. Spend is already recorded above either way.
-    console.error('seed_too_few_valid', clean.length);
-    return json(200, { skipped: 'too_few_valid_messages', valid: clean.length, usd: totalUsd.toFixed(5) });
-  }
+      try {
+        const attempts = 1;
+        const res = await generate(null);
+        if (res.fatal) {
+          await recordSpend();
+          console.error('seed_failed', res.fatal, etDate);
+          return finish({ skipped: res.fatal, date: etDate, usd: totalUsd.toFixed(5) });
+        }
 
-  const colorFor = (name: string) => {
-    let h = 0;
-    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-    const palette = ['#8e24aa', '#1565c0', '#00695c', '#b71c1c', '#4527a0', '#ef6c00', '#2e7d32', '#ad1457'];
-    return palette[h % palette.length];
-  };
+        let clean = res.clean;
+        const violations = auditDay(clean);
+        await recordSpend();
 
-  const rows = clean.map((m: any) => ({
-    room: ROOM,
-    user_id: null,
-    screen_name: String(m.name).slice(0, 40),
-    body: String(m.text).slice(0, 1500),
-    color: colorFor(m.name),
-    bot: true,
-    created_at: new Date(windowStartUtc.getTime() + m.offset_min * 60_000).toISOString(),
-  }));
+        // Single-pass enforcement: there is no room in the window for a second
+        // 150s generation, so a day that still breaks the rules gets its repeat
+        // offenders stripped instead of regenerated. audit_clean=false in
+        // ff_daily_seed_log marks those days - watch that column.
+        if (violations.length) {
+          const before = clean.length;
+          clean = dropRepeatBits(clean);
+          console.warn(
+            'seed_audit_trimmed', etDate, JSON.stringify(violations),
+            `- dropped ${before - clean.length} repeat-bit messages before posting`,
+          );
+        }
 
-  const { error: insertError } = await db.from('ff_chat_messages').insert(rows);
-  if (insertError) {
-    console.error('insert_error', insertError.message);
-    return json(500, { error: 'insert_failed', detail: insertError.message });
-  }
+        if (clean.length < 15) {
+          console.error('seed_too_few_valid', clean.length, etDate);
+          return finish({ skipped: 'too_few_valid_messages', valid: clean.length, usd: totalUsd.toFixed(5) });
+        }
 
-  // Record that WE wrote this date. The idempotency check above keys off this,
-  // not off the mere presence of rows — see LEN-1593.
-  await db.from('ff_daily_seed_log').upsert({
-    et_date: etDate,
-    rows: rows.length,
-    attempts,
-    audit_clean: violations.length === 0,
-    posted_at: new Date().toISOString(),
+        const colorFor = (name: string) => {
+          let h = 0;
+          for (let k = 0; k < name.length; k++) h = (h * 31 + name.charCodeAt(k)) >>> 0;
+          const palette = ['#8e24aa', '#1565c0', '#00695c', '#b71c1c', '#4527a0', '#ef6c00', '#2e7d32', '#ad1457'];
+          return palette[h % palette.length];
+        };
+
+        const rows = clean.map((m: any) => ({
+          room: ROOM,
+          user_id: null,
+          screen_name: String(m.name).slice(0, 40),
+          body: String(m.text).slice(0, 1500),
+          color: colorFor(m.name),
+          bot: true,
+          created_at: new Date(windowStartUtc.getTime() + m.offset_min * 60_000).toISOString(),
+        }));
+
+        const { error: insertError } = await db.from('ff_chat_messages').insert(rows);
+        if (insertError) {
+          console.error('insert_error', insertError.message);
+          return finish({ error: 'insert_failed', detail: insertError.message });
+        }
+
+        // Record that WE wrote this date. The idempotency check above keys off
+        // this, not the mere presence of rows - see LEN-1593.
+        await db.from('ff_daily_seed_log').upsert({
+          et_date: etDate,
+          rows: rows.length,
+          attempts,
+          audit_clean: violations.length === 0,
+          posted_at: new Date().toISOString(),
+        });
+
+        console.log('seed_posted', etDate, rows.length, `audit_clean=${violations.length === 0}`);
+        return finish({
+          posted: rows.length,
+          date: etDate,
+          usd: totalUsd.toFixed(5),
+          audit_clean: violations.length === 0,
+          violations: violations.length ? violations : undefined,
+        });
+      } catch (e) {
+        console.error('seed_exception', e && (e as Error).message);
+        return finish({ error: 'exception', detail: String(e && (e as Error).message) });
+      }
+    },
   });
 
-  return json(200, {
-    posted: rows.length,
-    date: etDate,
-    usd: totalUsd.toFixed(5),
-    attempts,
-    audit_clean: violations.length === 0,
-    violations: violations.length ? violations : undefined,
+  return new Response(stream, {
+    status: 200,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   });
 });
