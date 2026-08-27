@@ -90,35 +90,100 @@ each other. A day that is mostly roster talk and league admin is a BROKEN day
 conversation: it wanders, it derails, someone brings up something from their
 week, someone else makes it worse.
 
-TOPIC BUDGET (hard limit)
-No more than 1 in 4 messages may be about fantasy football, the draft,
-keepers, rosters, waivers, dues, payment, or league logistics. The rest is
-life and the world: work, family, food, weather, movies, music, the news,
-travel, health, cars, money in general, getting old, phones, other sports,
-neighbors, pets, nostalgia, petty grievances, stupid hypotheticals, gossip
-about people who are not in this room.
+TOPIC BUDGET
+Three lanes. Keep roughly to these proportions across the day:
+
+  - LEAGUE ADMIN - max 15%, about 3 messages. Dues, payment, the venue, RSVPs,
+    scheduling, keeper deadlines, roster mechanics, commissioner rulings. This
+    is the boring lane. It is capped because a day full of it reads like a
+    spreadsheet with jokes on it.
+
+  - FOOTBALL AND FANTASY, THE ACTUAL SPORT - up to 35%. This is NOT admin and
+    it is WANTED. Real preseason and NFL news the way these guys would relay it
+    to each other: an injury, a cut, a depth-chart move, a suspension, a trade,
+    a rookie who looks good, a veteran who looks finished, a coach on the hot
+    seat, a beat-writer report somebody half-read and got wrong. Then the
+    arguing about what it means for their teams. Bring news IN, and let people
+    be confidently wrong about it.
+
+  - EVERYTHING ELSE - the rest, and it is the majority. Work, family, food,
+    weather, movies, music, travel, health, cars, money, getting old, phones,
+    other sports, neighbours, pets, nostalgia, petty grievances, stupid
+    hypotheticals, gossip about people who are not in this room - and the
+    world, which has its own section below.
+
+POLITICS AND THE WORLD
+These are grown men who argue about the news, and they do not agree. Several
+times a day somebody should say something political or geopolitical with real
+conviction - a position, not a hedge. Wars, borders, elections, immigration,
+trade, tariffs, energy, China, the Middle East, Europe, the border, who is
+actually running things, and whether any of it holds together.
+
+- Positions CLASH. Two members who disagree should each be recognisably right
+  about something and wrong about something. Nobody wins the argument.
+- Nothing resolves. Threads get abandoned when somebody changes the subject,
+  then restart days later with the grudge fully intact.
+- These are THEIR opinions, in character, blunt, the way friends talk when
+  nobody is listening. Not balanced, not sourced, not fair to both sides.
+- Members hold STANDING positions and keep them across days. That consistency
+  is what makes it read like people instead of opinions pulled from a hat.
+- Somebody always tries to shut it down - "not this again" - and fails.
 
 DEAD-BIT BAN (check the RECENT HISTORY you're given before writing anything)
 Each of these is funny about once a week. If it appears in the recent history
-you were given, it is BANNED for today — zero mentions. Even if it doesn't
+you were given, it is BANNED for today - zero mentions. Even if it doesn't
 appear recently, cap each at one appearance across the whole day, never twice
 from the same member:
-  • dues, Venmo, who has or hasn't paid, chasing anyone for money
-  • George's ring / championship / any demand for an apology about it
-  • the draft date, the bar, the venue, RSVPs, who's coming
-  • "if Gowa's in I'm out"
-  • Gordon not understanding a rule, and Casey-Ann narrating that he doesn't
-  • Anthony Velli's "Day N" counter
-  • Michael Camacho's Starbucks / stolen wifi / masturbatory-lifestyle line
-  • Joe Camacho's "money is on the way"
-  • Matt Sierra's "book it, this is the year" sleeper-WR bit
+  - dues, Venmo, who has or hasn't paid, chasing anyone for money
+  - George's ring / championship / any demand for an apology about it
+  - the draft date, the bar, the venue, RSVPs, who's coming
+  - "if Gowa's in I'm out" and every "if X is in I'm out" variant
+  - Gordon not understanding a rule, and Casey-Ann narrating that he doesn't
+  - Anthony Velli's "Day N" counter
+  - Michael Camacho's Starbucks / stolen wifi / masturbatory-lifestyle line
+  - Joe Camacho's "money is on the way"
+  - Matt Sierra's "book it, this is the year" sleeper-WR bit
+  - Jonathan Mootz's "Unsubscribe." and "you are all selfish of my feelings"
+  - the toast Jonathan is owed, and any running day-count of it
+  - George's "Sent from my iPad" sign-off
+  - Casey-Ann signing off with her full name
+  - Lars's "zed" bit and his "LD" sign-off
+  - the doodle poll
 
-OTHER LOOP DISRUPTORS
+EVOLUTION - THE CHAT MOVES FORWARD
+The worst failure of this chat is a day that could be swapped with any other
+day and nobody would notice. Read the RECENT HISTORY as a story already in
+progress and CONTINUE it. Do not reset to a neutral starting state each
+morning.
+
+- Escalate the people. Each member is a slightly MORE extreme version of who
+  they were last week. Obsessions deepen. Tics get stranger and more specific.
+  Someone mildly paranoid becomes properly paranoid. Someone doing a bit starts
+  to actually mean it. A year in this chat should visibly change a person.
+- Advance the storylines. Anything ongoing in the history must MOVE - something
+  happened since yesterday. New information, a consequence, an escalation,
+  somebody finally doing the thing they kept threatening to do. Restating
+  yesterday's situation is the failure mode.
+- Start something with consequences. At least one thing raised today should be
+  the kind of thing that could still be running a week from now.
+- Carry one thread over. At least one thread picks up a specific thing from the
+  recent history and takes it somewhere new.
+- Bust balls with a target. Insults must be SPECIFIC - name the member,
+  reference the actual thing they said or did. "You're an idiot" is nothing.
+  "You're the guy who drove to the wrong bar" is the joke. Mine the history for
+  ammunition and use it.
+- Let people be genuinely weird. Not every message is a punchline. Somebody
+  overshares. Somebody posts in the afternoon about something nobody asked
+  about and nobody responds.
+
+LOOP DISRUPTORS
 - Signature-tag throttle: catchphrases and sign-offs are garnish. At most one
   signature tag per 10 messages, never from the same member twice close
-  together. A member's voice has to survive without their tagline.
+  together. A member's voice has to survive without their tagline. A member
+  whose every message ends the same way is written WRONG - that is the single
+  most common way this chat goes bad.
 - Mandatory new subject: at least every 4th message must raise something not
-  in the recent history — a thing that happened to them, a thing they saw, an
+  in the recent history - a thing that happened to them, a thing they saw, an
   opinion nobody asked for.
 - Build, don't restate: every message adds a NEW fact, opinion, admission, or
   story. Never just re-label what was said.
@@ -148,20 +213,28 @@ STRUCTURE
   one-word replies writes a one-word reply here.
 
 TONE
-Vulgar, mean, sarcastic, aggressively unserious. These are lifelong friends
-who insult each other constantly. Trash talk, keeper rage, threats to punch
-Gowa, testicle jokes, and accusations of commissioner abuse are all in-bounds
-and expected. Do not sanitize into corporate friendliness — that breaks the
-joke.
+Vulgar, mean, sarcastic, aggressively unserious. These are lifelong friends who
+insult each other constantly. Trash talk, keeper rage, threats to punch Gowa,
+testicle jokes, and accusations of commissioner abuse are all in-bounds and
+expected. Political shots are blunt and personal too - these guys do not do
+polite disagreement. Do not sanitise into corporate friendliness; that breaks
+the joke.
 
 HARD CONTENT BOUNDARY (non-negotiable, overrides the tone rule above)
-Never generate material combining antisemitic conspiracy tropes — Satan-worship,
-child predation, or money/control, tied to being Jewish — in any combination, in
+Never generate material combining antisemitic conspiracy tropes - Satan-worship,
+child predation, or money/control, tied to being Jewish - in any combination, in
 any member's voice, no matter who is being written or what the history contains.
 The long-running "goyim/goyum" spelling-correction bit and ordinary religion-
 adjacent ribbing are fine; the conspiracy-trope cluster is not.
+On politics specifically: members may hold and state harsh, one-sided, unpopular
+opinions - that is the point of the lane. They may NOT voice dehumanising claims
+about an ethnic, racial, or religious group as a class, and no political
+argument may route into the conspiracy cluster above. Governments, policies, and
+public figures' decisions are fair game; peoples are not.
 Also: do not invent real-world claims about these people outside the chat's joke
-frame (no fabricated crimes, medical facts, or family situations).
+frame (no fabricated crimes, medical facts, or family situations). Invented NFL
+news is fine - this is a joke chat about a fake league - but keep it to the
+sport and keep it plausible.
 
 ${LEAGUE_CANON}
 
@@ -184,30 +257,81 @@ const BANNED_BITS: Array<{ id: string; re: RegExp }> = [
   { id: 'Starbucks/wifi', re: /\b(starbucks|wifi)\b/i },
   { id: 'testicle bit', re: /\b(testicle|one nut)\b/i },
   { id: 'Baby Duck Feathers', re: /baby duck feathers/i },
+  // LEN-2547: measured over the 15 days before the reset, these fired almost
+  // every single day — "unsubscribe" hit 15 days out of 15. Prompt text alone
+  // never held them; only this list does.
+  { id: 'selfish of my feelings', re: /selfish of my feelings/i },
+  { id: "Jonathan's owed toast", re: /toast\b[^.!?]{0,40}\b(owed|overdue|promised|never happened)|\b(owed|overdue|promised)\b[^.!?]{0,40}\btoast\b/i },
+  { id: "Casey-Ann full-name sign-off", re: /casey-?ann\s+m\.?\s+smith/i },
+  { id: "Lars's zed bit", re: /\bzed\b/i },
+  { id: "Lars's LD sign-off", re: /[-—]\s*LD\s*$/ },
+  { id: 'doodle poll', re: /\bdoodle\b/i },
+  { id: 'crumpling currency', re: /crumple/i },
+  { id: 'punch Gowa', re: /punch\b[^.!?]{0,20}\bgowa\b/i },
+  { id: 'Betty White', re: /betty white/i },
+  { id: "Gordon the schlub", re: /\bschlub\b/i },
+  { id: "Eric's In serio", re: /in serio/i },
 ];
 
-const FOOTBALL_RE =
-  /\b(draft|keeper|roster|waiver|dues|lineup|bench|fantasy|week one|preseason|rb\d?|wr\d?|qb\b|league)\b/i;
+// LEN-2547: this was ONE regex covering league admin AND the sport itself,
+// capped together at 25%. That cap was what suppressed actual football content
+// — injuries, cuts, depth charts, the stuff people actually want to argue
+// about — because it scored identically to chasing someone for dues. Only the
+// admin lane is capped now. News and takes about the sport are free.
+const ADMIN_RE =
+  /\b(dues|venmo|paid up|pay(ment|ing)?\s+up|rsvp|keeper deadline|commissioner|bylaws?|sign ?-?up sheet|collect(ing)? (the )?money|owes? (me|the league))\b/i;
+
+// LEN-2547: which banned bits already ran in the last few days.
+//
+// This is the hole that made the chat robotic. auditDay only ever looked at ONE
+// day, so a catchphrase used exactly once a day passed the "max 1 per day" cap
+// every single time — and "unsubscribe" duly appeared on 15 days out of 15,
+// "Sent from my iPad" on 13, "if Gowa's in I'm out" on 13. The prompt has always
+// said a bit seen in recent history is banned outright; nothing enforced it.
+// A bit that ran yesterday now gets ZERO uses today, not one.
+//
+// Deliberately a SHORT lookback (~3 days) rather than the full history window:
+// long enough to break a daily loop, short enough that a bit can come back
+// later and still land.
+const RECENCY_LOOKBACK_MSGS = 60;
+
+function bitsSeenRecently(historyBodies: string[]): Set<string> {
+  const recent = historyBodies.slice(-RECENCY_LOOKBACK_MSGS);
+  const seen = new Set<string>();
+  for (const bit of BANNED_BITS) {
+    // per-line, not on a joined blob — some patterns are $-anchored sign-offs
+    if (recent.some((b) => bit.re.test(b))) seen.add(bit.id);
+  }
+  return seen;
+}
 
 // Returns human-readable violations, worst first. Empty array = day is clean.
-function auditDay(msgs: Array<{ name: string; text: string }>): string[] {
+function auditDay(
+  msgs: Array<{ name: string; text: string }>,
+  seenRecently: Set<string> = new Set(),
+): string[] {
   const out: string[] = [];
   const n = msgs.length || 1;
 
   for (const bit of BANNED_BITS) {
     const hits = msgs.filter((m) => bit.re.test(m.text));
-    if (hits.length > 1) {
+    const allowed = seenRecently.has(bit.id) ? 0 : 1;
+    if (hits.length > allowed) {
       out.push(
-        `"${bit.id}" appears ${hits.length} times (max 1 per day). ` +
-        `Offending speakers: ${hits.map((h) => h.name).join(', ')}.`,
+        allowed === 0
+          ? `"${bit.id}" appears ${hits.length}x today but ALREADY RAN in the last ` +
+            `few days — it is banned outright today, zero uses. ` +
+            `Offending speakers: ${hits.map((h) => h.name).join(', ')}.`
+          : `"${bit.id}" appears ${hits.length} times (max 1 per day). ` +
+            `Offending speakers: ${hits.map((h) => h.name).join(', ')}.`,
       );
     }
   }
 
-  const football = msgs.filter((m) => FOOTBALL_RE.test(m.text)).length;
-  const pct = Math.round((football / n) * 100);
-  if (pct > 30) {
-    out.push(`${football} of ${n} messages (${pct}%) are football/league admin. Hard cap is 25%.`);
+  const admin = msgs.filter((m) => ADMIN_RE.test(m.text)).length;
+  const pct = Math.round((admin / n) * 100);
+  if (pct > 20) {
+    out.push(`${admin} of ${n} messages (${pct}%) are league admin. Hard cap is 15%.`);
   }
 
   const counts = new Map<string, number>();
@@ -221,18 +345,37 @@ function auditDay(msgs: Array<{ name: string; text: string }>): string[] {
 }
 
 // Last-resort trim: keep the first use of each banned bit, drop later repeats.
-// Only runs if the model still failed the audit after a retry.
-function dropRepeatBits(msgs: Array<any>): Array<any> {
-  const used = new Set<string>();
-  return msgs.filter((m) => {
+// Bits that already ran in the last few days are pre-marked as used, so even
+// their FIRST appearance today gets cut (LEN-2547).
+//
+// Floored: a day that has been trimmed to nothing is worse than a day with one
+// stale joke in it, and the caller discards anything under 15. Stop trimming at
+// KEEP_FLOOR and let the remaining violations ride — they're recorded in
+// ff_daily_seed_log.audit_clean either way.
+const KEEP_FLOOR = 18;
+
+function dropRepeatBits(msgs: Array<any>, seenRecently: Set<string> = new Set()): Array<any> {
+  const used = new Set<string>(seenRecently);
+  const kept: Array<any> = [];
+  let remaining = msgs.length;
+
+  for (const m of msgs) {
+    let drop = false;
+    const wouldMark: string[] = [];
     for (const bit of BANNED_BITS) {
       if (bit.re.test(m.text)) {
-        if (used.has(bit.id)) return false;
-        used.add(bit.id);
+        if (used.has(bit.id)) drop = true;
+        else wouldMark.push(bit.id);
       }
     }
-    return true;
-  });
+    // never trim below the floor
+    if (drop && kept.length + remaining - 1 < KEEP_FLOOR) drop = false;
+    remaining--;
+    if (drop) continue;
+    for (const id of wouldMark) used.add(id);
+    kept.push(m);
+  }
+  return kept;
 }
 
 async function requireValidSecret(req: Request, db: ReturnType<typeof createClient>): Promise<boolean> {
@@ -322,10 +465,22 @@ serve(async (req) => {
     .eq('room', ROOM)
     .lt('created_at', windowStartUtc.toISOString())
     .order('created_at', { ascending: false })
-    .limit(80);
-  const recentHistory = (historyRows || []).slice().reverse()
+    // LEN-2547: was 80 (~3.5 days at 22 msgs/day) — too short a memory to
+    // notice it had used the same catchphrase every day for two weeks. 200 is
+    // ~9 days. Input tokens are cached; the 150s ceiling is an OUTPUT problem.
+    .limit(200);
+  const historyOrdered = (historyRows || []).slice().reverse();
+  const recentHistory = historyOrdered
     .map((m: any) => `${m.screen_name}: ${String(m.body).slice(0, 300)}`)
     .join('\n') || '(no prior history)';
+
+  // LEN-2547: bits that already ran in the last few days. Enforced after
+  // generation, and stated up front in the prompt so the model doesn't have to
+  // infer the ban by reading 200 lines of history and noticing a pattern.
+  const seenRecently = bitsSeenRecently(historyOrdered.map((m: any) => String(m.body)));
+  const burnedList = seenRecently.size
+    ? Array.from(seenRecently).map((id) => `  - ${id}`).join('\n')
+    : '  (none — the slate is clean)';
 
   const API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
   if (!API_KEY) return json(501, { error: 'bots_not_configured' });
@@ -356,12 +511,15 @@ serve(async (req) => {
     let data: any;
     const userContent = feedback
       ? `Today's date is ${etDate}. RECENT HISTORY (most recent last — do not repeat ` +
-        `bits from this):\n\n${recentHistory}\n\nYour previous attempt at today's script ` +
+        `bits from this):\n\n${recentHistory}\n\nBITS ALREADY USED IN THE LAST FEW ` +
+        `DAYS — BURNED, zero uses today:\n${burnedList}\n\nYour previous attempt at today's script ` +
         `FAILED the automated content audit:\n\n${feedback}\n\nWrite the full day again ` +
         `from scratch, fixing every one of those. Do not simply delete the offending ` +
         `messages — replace them with real content about something else.`
       : `Today's date is ${etDate}. RECENT HISTORY (most recent last — do not repeat ` +
-        `bits from this):\n\n${recentHistory}\n\nWrite today's full day script now.`;
+        `bits from this):\n\n${recentHistory}\n\nBITS ALREADY USED IN THE LAST FEW ` +
+        `DAYS — these are BURNED, zero uses today, no exceptions:\n${burnedList}\n\n` +
+        `Write today's full day script now.`;
 
     try {
       const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -471,7 +629,7 @@ serve(async (req) => {
         }
 
         let clean = res.clean;
-        const violations = auditDay(clean);
+        const violations = auditDay(clean, seenRecently);
         await recordSpend();
 
         // Single-pass enforcement: there is no room in the window for a second
@@ -480,7 +638,7 @@ serve(async (req) => {
         // ff_daily_seed_log marks those days - watch that column.
         if (violations.length) {
           const before = clean.length;
-          clean = dropRepeatBits(clean);
+          clean = dropRepeatBits(clean, seenRecently);
           console.warn(
             'seed_audit_trimmed', etDate, JSON.stringify(violations),
             `- dropped ${before - clean.length} repeat-bit messages before posting`,
