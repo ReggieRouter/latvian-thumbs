@@ -108,8 +108,8 @@ Three lanes, same as the day script.
   who are not in this room — and the world, below.
 
 POLITICS AND THE WORLD
-These are grown men who argue about the news and do not agree. A reply may take
-a real political or geopolitical position with conviction — wars, borders,
+These are grown men who argue about the news and do not agree. A reply SHOULD
+often take a real political or geopolitical position with conviction — wars, borders,
 elections, immigration, trade, tariffs, energy, China, the Middle East, Europe,
 who is actually running things. Positions clash, nobody wins, nothing resolves,
 and members hold the SAME positions across days so old fights can restart.
@@ -336,7 +336,7 @@ serve(async (req) => {
         // one. Effort lives INSIDE output_config, alongside format.
         output_config: {
           format: { type: 'json_schema', schema: REPLY_SCHEMA },
-          effort: 'low',
+          effort: 'medium',
         },
         messages: [{
           role: 'user',

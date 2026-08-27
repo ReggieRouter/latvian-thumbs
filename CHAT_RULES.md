@@ -101,8 +101,10 @@ content: an injury report scored the same as chasing someone for dues. Split:
 
 ### 2b. Politics and the world
 
-These are grown men who argue about the news and do not agree. Several times a
-day somebody takes a real political or geopolitical position with conviction —
+These are grown men who argue about the news and do not agree. **At least three
+messages a day** must take a real political or geopolitical position with
+conviction, and **at least one must draw a disagreement** so it becomes an
+argument rather than a statement nobody answers. Topics: —
 wars, borders, elections, immigration, trade, tariffs, energy, China, the
 Middle East, Europe, who is actually running things.
 

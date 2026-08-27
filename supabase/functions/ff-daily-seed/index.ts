@@ -113,11 +113,14 @@ Three lanes. Keep roughly to these proportions across the day:
     world, which has its own section below.
 
 POLITICS AND THE WORLD
-These are grown men who argue about the news, and they do not agree. Several
-times a day somebody should say something political or geopolitical with real
-conviction - a position, not a hedge. Wars, borders, elections, immigration,
-trade, tariffs, energy, China, the Middle East, Europe, the border, who is
-actually running things, and whether any of it holds together.
+These are grown men who argue about the news, and they do not agree.
+
+REQUIRED, not optional: AT LEAST THREE messages today must take a real
+political or geopolitical position with conviction - a position, not a hedge -
+and at least ONE of those must draw an actual disagreement from another member,
+so it becomes an argument rather than a statement nobody answers. Wars, borders,
+elections, immigration, trade, tariffs, energy, China, the Middle East, Europe,
+who is actually running things, and whether any of it holds together.
 
 - Positions CLASH. Two members who disagree should each be recognisably right
   about something and wrong about something. Nobody wins the argument.
@@ -278,6 +281,9 @@ const BANNED_BITS: Array<{ id: string; re: RegExp }> = [
 // — injuries, cuts, depth charts, the stuff people actually want to argue
 // about — because it scored identically to chasing someone for dues. Only the
 // admin lane is capped now. News and takes about the sport are free.
+const POLITICS_RE =
+  /\b(tariff|politic|election|border|immigration|china|russia|ukraine|europe|middle east|gas prices|white house|congress|senate|president|government|washington|policy|trade war|inflation|war\b)/i;
+
 const ADMIN_RE =
   /\b(dues|venmo|paid up|pay(ment|ing)?\s+up|rsvp|keeper deadline|commissioner|bylaws?|sign ?-?up sheet|collect(ing)? (the )?money|owes? (me|the league))\b/i;
 
@@ -326,6 +332,15 @@ function auditDay(
             `Offending speakers: ${hits.map((h) => h.name).join(', ')}.`,
       );
     }
+  }
+
+  // LEN-2547: a floor, not a cap. dropRepeatBits can only remove messages, so
+  // this cannot self-correct a thin day — it marks audit_clean=false in
+  // ff_daily_seed_log so a lane quietly going missing is visible instead of
+  // silent. Watch that column.
+  const politics = msgs.filter((m) => POLITICS_RE.test(m.text)).length;
+  if (politics < 2) {
+    out.push(`only ${politics} political/world messages (need at least 3 — the lane is going missing).`);
   }
 
   const admin = msgs.filter((m) => ADMIN_RE.test(m.text)).length;
@@ -543,7 +558,11 @@ serve(async (req) => {
         // one. Effort lives INSIDE output_config, alongside format.
         output_config: {
           format: { type: 'json_schema', schema: SEED_SCHEMA },
-          effort: 'low',
+          // `low` cut output 12,090 -> ~3,200 tokens and fixed the timeout, but it
+          // also skipped the tail of a long instruction list — the politics lane
+          // landed ~1 message/day against a stated "several". `medium` restores
+          // instruction-following and still finishes far inside 150s.
+          effort: 'medium',
         },
           messages: [{ role: 'user', content: userContent }],
         }),
