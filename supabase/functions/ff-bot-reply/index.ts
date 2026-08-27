@@ -21,6 +21,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { PERSONAS } from '../_shared/personas.ts';
+import { LEAGUE_CANON, DRAFT_DATE } from '../_shared/canon.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -45,7 +46,10 @@ const MAX_REPLIES = 3;         // per invocation
 const REPLY_COOLDOWN_MS = 45_000;
 const CROWD_NAG_EVERY_MS = 2 * 60 * 60 * 1000;
 const CAP_NAG_EVERY_MS = 24 * 60 * 60 * 1000;
-const DRAFT_NIGHT = '2026-08-27';
+// LEN-1593: was hardcoded '2026-08-27' — a Thursday, and a date the room has
+// never once said. The league voted on and announced Sunday Aug 23rd. Now
+// sourced from _shared/canon.ts so the two functions cannot disagree.
+const DRAFT_NIGHT = DRAFT_DATE;
 
 const HOST_COLOR = '#008000';
 
@@ -128,6 +132,8 @@ scan it and note which bits are already present. Then:
    doing X things") is a wasted turn — delete it and write a real one.
 5. NO STOCK OPENERS. If a line you're about to write would have worked verbatim
    yesterday, it is wrong. Rewrite it around today's specifics.
+
+${LEAGUE_CANON}
 
 HOW TO REPLY
 - Reply to what was ACTUALLY just said. Quote it back, argue with it, escalate

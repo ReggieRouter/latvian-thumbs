@@ -13,11 +13,16 @@
 // SQL subquery) and this function (via its own service-role client). No
 // project API key needs to leave the database to make this work.
 //
-// Idempotent: if the target ET date already has rows, it skips without
-// spending anything. Safe to re-invoke by hand.
+// Idempotent, but only against ITSELF (LEN-1593): a date counts as done when
+// ff_daily_seed_log says this function posted it. Rows from anywhere else are
+// reported as `foreign_rows_present` and logged loudly rather than silently
+// treated as "already handled" — that silent skip switched the whole
+// automation off for three days in Aug 2026. Re-invoke with {"force": true}
+// to clear a date's bot rows and regenerate. Safe to re-invoke by hand.
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { PERSONAS } from '../_shared/personas.ts';
+import { LEAGUE_CANON } from '../_shared/canon.ts';
 
 const ROOM = 'league';
 const MODEL = Deno.env.get('FF_BOT_MODEL') || 'claude-sonnet-5';
@@ -31,7 +36,13 @@ const OFF_MATRIX_ALLOWLIST = new Set(['Mike Coppinger', 'Justin Maneri']);
 
 const WINDOW_START_MIN = 0;    // 7:00 AM ET
 const WINDOW_END_MIN = 840;    // 9:00 PM ET — see CHAT_RULES.md §5
-const TARGET_MESSAGE_COUNT = '26 to 30';
+// LEN-1593: was '26 to 30'. A day that size takes >150s to generate and the
+// edge runtime hard-stops a request at 150s (streaming keepalives do NOT
+// extend it — a streamed attempt returned 200 with nothing but keepalive
+// bytes). A shorter day that actually gets written every night beats a longer
+// one that never runs. Raise this only alongside a generation path that is not
+// bound by the 150s request ceiling.
+const TARGET_MESSAGE_COUNT = '20 to 24';
 
 function json(code: number, obj: unknown): Response {
   return new Response(JSON.stringify(obj), {
@@ -152,10 +163,77 @@ adjacent ribbing are fine; the conspiracy-trope cluster is not.
 Also: do not invent real-world claims about these people outside the chat's joke
 frame (no fabricated crimes, medical facts, or family situations).
 
+${LEAGUE_CANON}
+
 OUTPUT
 Return JSON matching the schema: an array of messages, each with the member's
 exact name from the matrix, their message text, and offset_min. Screen names
 must match the matrix exactly. Never write as "OnlineHost".`;
+
+// LEN-1593: the rules used to live only in the prompt, and nothing checked the
+// result — so when the model drifted, the drift shipped. These patterns are the
+// output-side enforcement of the dead-bit ban and topic budget in CHAT_RULES.md.
+const BANNED_BITS: Array<{ id: string; re: RegExp }> = [
+  { id: "gowa's in i'm out", re: /\b(if\s+)?\w+['’]?s?\s+in\s+i['’]?m\s+out\b/i },
+  { id: 'dues/venmo/payment chasing', re: /\b(dues|venmo|paid up|owe me|pay me|bring cash)\b/i },
+  { id: 'draft date/venue/RSVP', re: /\b(mcsorley|draft (is |night|day)|aug(ust)?\s*23)\b/i },
+  { id: "george's ring/championship", re: /\b(my ring|won it all|reigning champ)/i },
+  { id: 'Sent from my iPad', re: /sent from my ipad/i },
+  { id: 'Unsubscribe', re: /\bunsubscribe\b/i },
+  { id: 'money is on the way', re: /money('s| is) on the way/i },
+  { id: 'Starbucks/wifi', re: /\b(starbucks|wifi)\b/i },
+  { id: 'testicle bit', re: /\b(testicle|one nut)\b/i },
+  { id: 'Baby Duck Feathers', re: /baby duck feathers/i },
+];
+
+const FOOTBALL_RE =
+  /\b(draft|keeper|roster|waiver|dues|lineup|bench|fantasy|week one|preseason|rb\d?|wr\d?|qb\b|league)\b/i;
+
+// Returns human-readable violations, worst first. Empty array = day is clean.
+function auditDay(msgs: Array<{ name: string; text: string }>): string[] {
+  const out: string[] = [];
+  const n = msgs.length || 1;
+
+  for (const bit of BANNED_BITS) {
+    const hits = msgs.filter((m) => bit.re.test(m.text));
+    if (hits.length > 1) {
+      out.push(
+        `"${bit.id}" appears ${hits.length} times (max 1 per day). ` +
+        `Offending speakers: ${hits.map((h) => h.name).join(', ')}.`,
+      );
+    }
+  }
+
+  const football = msgs.filter((m) => FOOTBALL_RE.test(m.text)).length;
+  const pct = Math.round((football / n) * 100);
+  if (pct > 30) {
+    out.push(`${football} of ${n} messages (${pct}%) are football/league admin. Hard cap is 25%.`);
+  }
+
+  const counts = new Map<string, number>();
+  for (const m of msgs) counts.set(m.name, (counts.get(m.name) || 0) + 1);
+  const maxPer = Math.max(3, Math.ceil(n / 8));
+  for (const [name, c] of counts) {
+    if (c > maxPer) out.push(`${name} speaks ${c} times (max ${maxPer}).`);
+  }
+
+  return out;
+}
+
+// Last-resort trim: keep the first use of each banned bit, drop later repeats.
+// Only runs if the model still failed the audit after a retry.
+function dropRepeatBits(msgs: Array<any>): Array<any> {
+  const used = new Set<string>();
+  return msgs.filter((m) => {
+    for (const bit of BANNED_BITS) {
+      if (bit.re.test(m.text)) {
+        if (used.has(bit.id)) return false;
+        used.add(bit.id);
+      }
+    }
+    return true;
+  });
+}
 
 async function requireValidSecret(req: Request, db: ReturnType<typeof createClient>): Promise<boolean> {
   const got = req.headers.get('x-seed-secret') || '';
@@ -186,15 +264,48 @@ serve(async (req) => {
   const windowStartUtc = new Date(`${etDate}T07:00:00-04:00`);
   const windowEndUtc = new Date(`${etDate}T21:00:00-04:00`);
 
-  // ---- Idempotency: skip if this date already has rows ----
+  // ---- Idempotency ----
+  // LEN-1593: this check used to be "any rows exist for this date → skip", and
+  // that silently killed the whole automation. Somebody bulk-inserted
+  // hand-written days for Aug 5-7 2026; every nightly run after that found rows,
+  // skipped, spent nothing, and logged nothing anyone would see. The job looked
+  // healthy for three days while the chat quietly went back to the old loop.
+  //
+  // Now we only treat a date as done if WE recorded posting it. Rows we didn't
+  // write are a foreign-content alarm, not a reason to go quietly back to sleep.
   const { count: existing } = await db
     .from('ff_chat_messages')
     .select('id', { count: 'exact', head: true })
     .eq('room', ROOM)
     .gte('created_at', windowStartUtc.toISOString())
     .lte('created_at', windowEndUtc.toISOString());
-  if ((existing || 0) > 0) {
+  const { data: seedLog } = await db
+    .from('ff_daily_seed_log').select('et_date, rows').eq('et_date', etDate).maybeSingle();
+
+  if ((existing || 0) > 0 && seedLog) {
     return json(200, { skipped: 'already_seeded', date: etDate, existing });
+  }
+  if ((existing || 0) > 0 && !seedLog && !body.force) {
+    console.error(
+      'foreign_rows_present', etDate, existing,
+      'rows exist for this date that this function did not write. Someone ' +
+      'hand-inserted a day. The seed is being starved — clear them or re-invoke ' +
+      'with {"force":true}. See LEN-1593.',
+    );
+    return json(200, {
+      skipped: 'foreign_rows_present',
+      date: etDate,
+      existing,
+      hint: 'Content not written by ff-daily-seed occupies this date. Re-invoke with force:true to replace it.',
+    });
+  }
+  if (body.force && (existing || 0) > 0) {
+    const { error: delErr } = await db.from('ff_chat_messages').delete()
+      .eq('room', ROOM).eq('bot', true)
+      .gte('created_at', windowStartUtc.toISOString())
+      .lte('created_at', windowEndUtc.toISOString());
+    if (delErr) return json(500, { error: 'force_clear_failed', detail: delErr.message });
+    console.warn('force_cleared', etDate, existing, 'bot rows removed before regenerating');
   }
 
   // ---- Monthly budget guard ----
@@ -219,117 +330,218 @@ serve(async (req) => {
   const API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
   if (!API_KEY) return json(501, { error: 'bots_not_configured' });
 
-  let data: any;
-  try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 16000,
-        system: [{ type: 'text', text: INSTRUCTIONS + '\n\n' + PERSONAS, cache_control: { type: 'ephemeral' } }],
-        output_config: { format: { type: 'json_schema', schema: SEED_SCHEMA } },
-        messages: [{
-          role: 'user',
-          content:
-            `Today's date is ${etDate}. RECENT HISTORY (most recent last — do not repeat ` +
-            `bits from this):\n\n${recentHistory}\n\nWrite today's full day script now.`,
-        }],
-      }),
-    });
-    if (!r.ok) {
-      console.error('anthropic_error', r.status, (await r.text().catch(() => '')).slice(0, 500));
-      return json(200, { skipped: 'model_error' });
-    }
-    data = await r.json();
-  } catch (e) {
-    console.error('anthropic_exception', e && (e as Error).message);
-    return json(200, { skipped: 'model_exception' });
-  }
-
-  if (data.stop_reason === 'refusal') {
-    console.warn('model_refusal', JSON.stringify(data.stop_details || {}));
-    return json(200, { skipped: 'refusal' });
-  }
-  if (data.stop_reason === 'max_tokens') {
-    console.error('seed_truncated', 'hit max_tokens, discarding partial output');
-    return json(200, { skipped: 'truncated' });
-  }
-
-  // ---- Record spend BEFORE inserting ----
-  const u = data.usage || {};
-  const usd =
-    ((u.input_tokens || 0) * PRICE.input +
-     (u.cache_creation_input_tokens || 0) * PRICE.cacheWrite +
-     (u.cache_read_input_tokens || 0) * PRICE.cacheRead +
-     (u.output_tokens || 0) * PRICE.output) / 1_000_000;
-  await db.from('ff_daily_seed_spend').upsert({
-    month,
-    input_tokens: (prior?.input_tokens || 0) + (u.input_tokens || 0),
-    cache_write_tokens: (prior?.cache_write_tokens || 0) + (u.cache_creation_input_tokens || 0),
-    cache_read_tokens: (prior?.cache_read_tokens || 0) + (u.cache_read_input_tokens || 0),
-    output_tokens: (prior?.output_tokens || 0) + (u.output_tokens || 0),
-    calls: (prior?.calls || 0) + 1,
-    usd: Number(prior?.usd || 0) + usd,
-    updated_at: new Date().toISOString(),
-  });
-
-  // ---- Parse + validate ----
-  let parsed: any = {};
-  try {
-    const text = (data.content || []).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('');
-    parsed = JSON.parse(text);
-  } catch (_) {
-    return json(200, { skipped: 'unparseable', usd: usd.toFixed(5) });
-  }
-
   const matrixNames = new Set(Array.from(String(PERSONAS).matchAll(/^#### (.+)$/gm)).map((m) => m[1].trim()));
 
-  let lastOffset = -1;
-  const clean = (parsed.messages || []).filter((m: any) => {
-    if (!m || typeof m.name !== 'string' || typeof m.text !== 'string' || typeof m.offset_min !== 'number') return false;
-    if (m.name === 'OnlineHost') return false;
-    if (!matrixNames.has(m.name) && !OFF_MATRIX_ALLOWLIST.has(m.name)) return false;
-    if (!m.text.trim()) return false;
-    if (m.offset_min < WINDOW_START_MIN || m.offset_min > WINDOW_END_MIN) return false;
-    if (m.offset_min < lastOffset) return false; // must be non-decreasing
-    lastOffset = m.offset_min;
-    return true;
-  });
-
-  if (clean.length < 15) {
-    // Too much got filtered out to trust the batch — skip rather than post a
-    // thin, malformed day. Spend is already recorded above either way.
-    console.error('seed_too_few_valid', clean.length, 'of', (parsed.messages || []).length);
-    return json(200, { skipped: 'too_few_valid_messages', valid: clean.length, usd: usd.toFixed(5) });
+  // Structural filter — schema-level sanity, independent of content quality.
+  function structurallyValid(messages: any[]): any[] {
+    let lastOffset = -1;
+    return (messages || []).filter((m: any) => {
+      if (!m || typeof m.name !== 'string' || typeof m.text !== 'string' || typeof m.offset_min !== 'number') return false;
+      if (m.name === 'OnlineHost') return false;
+      if (!matrixNames.has(m.name) && !OFF_MATRIX_ALLOWLIST.has(m.name)) return false;
+      if (!m.text.trim()) return false;
+      if (m.offset_min < WINDOW_START_MIN || m.offset_min > WINDOW_END_MIN) return false;
+      if (m.offset_min < lastOffset) return false; // must be non-decreasing
+      lastOffset = m.offset_min;
+      return true;
+    });
   }
 
-  const colorFor = (name: string) => {
-    let h = 0;
-    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-    const palette = ['#8e24aa', '#1565c0', '#00695c', '#b71c1c', '#4527a0', '#ef6c00', '#2e7d32', '#ad1457'];
-    return palette[h % palette.length];
+  let totalUsd = 0;
+  let spendAcc = {
+    input: 0, cacheWrite: 0, cacheRead: 0, output: 0, calls: 0,
   };
 
-  const rows = clean.map((m: any) => ({
-    room: ROOM,
-    user_id: null,
-    screen_name: String(m.name).slice(0, 40),
-    body: String(m.text).slice(0, 1500),
-    color: colorFor(m.name),
-    bot: true,
-    created_at: new Date(windowStartUtc.getTime() + m.offset_min * 60_000).toISOString(),
-  }));
+  async function generate(feedback: string | null): Promise<{ clean: any[]; fatal?: string }> {
+    let data: any;
+    const userContent = feedback
+      ? `Today's date is ${etDate}. RECENT HISTORY (most recent last — do not repeat ` +
+        `bits from this):\n\n${recentHistory}\n\nYour previous attempt at today's script ` +
+        `FAILED the automated content audit:\n\n${feedback}\n\nWrite the full day again ` +
+        `from scratch, fixing every one of those. Do not simply delete the offending ` +
+        `messages — replace them with real content about something else.`
+      : `Today's date is ${etDate}. RECENT HISTORY (most recent last — do not repeat ` +
+        `bits from this):\n\n${recentHistory}\n\nWrite today's full day script now.`;
 
-  const { error: insertError } = await db.from('ff_chat_messages').insert(rows);
-  if (insertError) {
-    console.error('insert_error', insertError.message);
-    return json(500, { error: 'insert_failed', detail: insertError.message });
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': API_KEY,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: MODEL,
+          max_tokens: 16000,
+          system: [{ type: 'text', text: INSTRUCTIONS + '\n\n' + PERSONAS, cache_control: { type: 'ephemeral' } }],
+          output_config: { format: { type: 'json_schema', schema: SEED_SCHEMA } },
+          messages: [{ role: 'user', content: userContent }],
+        }),
+      });
+      if (!r.ok) {
+        console.error('anthropic_error', r.status, (await r.text().catch(() => '')).slice(0, 500));
+        return { clean: [], fatal: 'model_error' };
+      }
+      data = await r.json();
+    } catch (e) {
+      console.error('anthropic_exception', e && (e as Error).message);
+      return { clean: [], fatal: 'model_exception' };
+    }
+
+    // Spend is accumulated for EVERY call, including failed audits — a retry
+    // costs real money and the cap has to see it.
+    const u = data.usage || {};
+    spendAcc = {
+      input: spendAcc.input + (u.input_tokens || 0),
+      cacheWrite: spendAcc.cacheWrite + (u.cache_creation_input_tokens || 0),
+      cacheRead: spendAcc.cacheRead + (u.cache_read_input_tokens || 0),
+      output: spendAcc.output + (u.output_tokens || 0),
+      calls: spendAcc.calls + 1,
+    };
+    totalUsd +=
+      ((u.input_tokens || 0) * PRICE.input +
+       (u.cache_creation_input_tokens || 0) * PRICE.cacheWrite +
+       (u.cache_read_input_tokens || 0) * PRICE.cacheRead +
+       (u.output_tokens || 0) * PRICE.output) / 1_000_000;
+
+    if (data.stop_reason === 'refusal') {
+      console.warn('model_refusal', JSON.stringify(data.stop_details || {}));
+      return { clean: [], fatal: 'refusal' };
+    }
+    if (data.stop_reason === 'max_tokens') {
+      console.error('seed_truncated', 'hit max_tokens, discarding partial output');
+      return { clean: [], fatal: 'truncated' };
+    }
+
+    try {
+      const text = (data.content || []).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('');
+      return { clean: structurallyValid(JSON.parse(text).messages) };
+    } catch (_) {
+      return { clean: [], fatal: 'unparseable' };
+    }
   }
 
-  return json(200, { posted: rows.length, date: etDate, usd: usd.toFixed(5) });
+  async function recordSpend() {
+    await db.from('ff_daily_seed_spend').upsert({
+      month,
+      input_tokens: (prior?.input_tokens || 0) + spendAcc.input,
+      cache_write_tokens: (prior?.cache_write_tokens || 0) + spendAcc.cacheWrite,
+      cache_read_tokens: (prior?.cache_read_tokens || 0) + spendAcc.cacheRead,
+      output_tokens: (prior?.output_tokens || 0) + spendAcc.output,
+      calls: (prior?.calls || 0) + spendAcc.calls,
+      usd: Number(prior?.usd || 0) + totalUsd,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  // ---- Generate, audit, enforce, insert (streamed) ----
+  // LEN-1593 sizing note, learned the hard way. The edge runtime kills a
+  // request after 150s WITHOUT SENT BYTES:
+  //   {"code":"IDLE_TIMEOUT","message":"Request idle timeout limit (150s) reached"}
+  // A full day's generation now runs past that, so the plain request died at
+  // 150s having already force-cleared the date - i.e. it deleted a day and
+  // wrote nothing. Moving the work to a waitUntil background task did not help
+  // either: 202 returned, then no spend and no rows 7 minutes later.
+  //
+  // The limit is on IDLE time, not total time. So we answer with a streamed
+  // body and push a space every 10s while the work runs. Leading whitespace is
+  // legal JSON, so callers can still JSON.parse the final payload unchanged.
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      controller.enqueue(encoder.encode(' '));           // start the response now
+      const keepalive = setInterval(() => {
+        try { controller.enqueue(encoder.encode(' ')); } catch (_) { /* closed */ }
+      }, 10_000);
+
+      const finish = (payload: unknown) => {
+        clearInterval(keepalive);
+        try { controller.enqueue(encoder.encode(JSON.stringify(payload))); } catch (_) { /* closed */ }
+        controller.close();
+      };
+
+      try {
+        const attempts = 1;
+        const res = await generate(null);
+        if (res.fatal) {
+          await recordSpend();
+          console.error('seed_failed', res.fatal, etDate);
+          return finish({ skipped: res.fatal, date: etDate, usd: totalUsd.toFixed(5) });
+        }
+
+        let clean = res.clean;
+        const violations = auditDay(clean);
+        await recordSpend();
+
+        // Single-pass enforcement: there is no room in the window for a second
+        // 150s generation, so a day that still breaks the rules gets its repeat
+        // offenders stripped instead of regenerated. audit_clean=false in
+        // ff_daily_seed_log marks those days - watch that column.
+        if (violations.length) {
+          const before = clean.length;
+          clean = dropRepeatBits(clean);
+          console.warn(
+            'seed_audit_trimmed', etDate, JSON.stringify(violations),
+            `- dropped ${before - clean.length} repeat-bit messages before posting`,
+          );
+        }
+
+        if (clean.length < 15) {
+          console.error('seed_too_few_valid', clean.length, etDate);
+          return finish({ skipped: 'too_few_valid_messages', valid: clean.length, usd: totalUsd.toFixed(5) });
+        }
+
+        const colorFor = (name: string) => {
+          let h = 0;
+          for (let k = 0; k < name.length; k++) h = (h * 31 + name.charCodeAt(k)) >>> 0;
+          const palette = ['#8e24aa', '#1565c0', '#00695c', '#b71c1c', '#4527a0', '#ef6c00', '#2e7d32', '#ad1457'];
+          return palette[h % palette.length];
+        };
+
+        const rows = clean.map((m: any) => ({
+          room: ROOM,
+          user_id: null,
+          screen_name: String(m.name).slice(0, 40),
+          body: String(m.text).slice(0, 1500),
+          color: colorFor(m.name),
+          bot: true,
+          created_at: new Date(windowStartUtc.getTime() + m.offset_min * 60_000).toISOString(),
+        }));
+
+        const { error: insertError } = await db.from('ff_chat_messages').insert(rows);
+        if (insertError) {
+          console.error('insert_error', insertError.message);
+          return finish({ error: 'insert_failed', detail: insertError.message });
+        }
+
+        // Record that WE wrote this date. The idempotency check above keys off
+        // this, not the mere presence of rows - see LEN-1593.
+        await db.from('ff_daily_seed_log').upsert({
+          et_date: etDate,
+          rows: rows.length,
+          attempts,
+          audit_clean: violations.length === 0,
+          posted_at: new Date().toISOString(),
+        });
+
+        console.log('seed_posted', etDate, rows.length, `audit_clean=${violations.length === 0}`);
+        return finish({
+          posted: rows.length,
+          date: etDate,
+          usd: totalUsd.toFixed(5),
+          audit_clean: violations.length === 0,
+          violations: violations.length ? violations : undefined,
+        });
+      } catch (e) {
+        console.error('seed_exception', e && (e as Error).message);
+        return finish({ error: 'exception', detail: String(e && (e as Error).message) });
+      }
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  });
 });

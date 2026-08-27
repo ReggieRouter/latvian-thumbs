@@ -21,9 +21,55 @@ batch anymore. If you're editing the rules, edit them in BOTH places: this file
 and the `INSTRUCTIONS` constant in `ff-daily-seed/index.ts` — the function
 doesn't read this file at runtime, it has its own copy.
 
-> **Tell them apart in the DB:** pre-seeded rows have whole-second timestamps
-> (`created_at` microseconds = 0). Genuine live `pg_cron` and reactive inserts
-> have fractional seconds.
+> **Tell them apart in the DB — corrected 2026-08-06 (LEN-1593).** The old
+> advice here said whole-second timestamps meant hand-written rows. **That is
+> wrong and it cost a diagnosis.** `ff-daily-seed` computes `created_at` as
+> `window_start + offset_min`, so *its* rows are whole-second too. Only
+> `ff-bot-reply` inserts at real clock time and therefore has fractional
+> seconds.
+>
+> The reliable test is **`ff_daily_seed_log`**: one row per ET date the seed
+> actually wrote. Chat messages on a date with no matching log row came from
+> somewhere else. Cross-check `ff_daily_seed_spend.calls` — content with no
+> spend behind it was not generated.
+
+> ⚠️ **Never hand-write and bulk-insert a day.** This is not a style
+> preference. The nightly job skips any date that already has messages, so a
+> hand-inserted day doesn't just break the rules — it silently switches the
+> automation off for that date. On 2026-08-04 someone pre-filled Aug 5-7; the
+> job then no-opped every night, spent nothing, logged nothing, and the chat
+> quietly went back to the old loop until Steve noticed the repetition. If a day
+> genuinely needs regenerating, invoke `ff-daily-seed` with `{"force": true}`.
+
+---
+
+## 0. League canon (settled facts)
+
+These are decided. They live in `supabase/functions/_shared/canon.ts` and are
+injected into both functions' prompts. **Do not restate them in chat and do not
+change them.**
+
+| Fact | Value |
+|---|---|
+| Draft | **Sunday, August 23rd 2026, 6:00 PM sharp** |
+| Venue | McSorley's Old Ale House, NYC |
+| Keeper lock deadline | August 17th 2026 |
+| Dues | $75, cash at the draft |
+| Commissioner | Steve Gowa (Chris signs off as "League Commissioner" as a bit) |
+| Reigning champion | George Economou |
+| Settled votes | 2QB **dead**; keeper-inflation review **passed** |
+
+Announced in-chat 2026-07-27: *"RESULTS. Draft: McSorley's, Sunday Aug 23rd, 6
+pm sharp."*
+
+**Why this section exists (LEN-1593):** nothing pinned these, so each
+generation re-derived them from recent history and they drifted — the time
+slid from 6pm to 7pm between Aug 3 and Aug 6, and `ff-bot-reply` had
+`DRAFT_NIGHT = '2026-08-27'` hardcoded, a Thursday matching nothing the room
+ever said. If chat history contradicts this table, **the table wins.**
+
+Never compute "the draft is in N days" into a message. It goes stale, it drifts,
+and it isn't interesting.
 
 ---
 
@@ -128,6 +174,16 @@ Also: no invented real-world claims about these people outside the joke frame �
 no fabricated crimes, medical facts, or family situations.
 
 ## 8. Self-check before inserting a day script
+
+**As of LEN-1593 this is enforced in code, not just asked for.**
+`ff-daily-seed` audits its own output (`auditDay()`), and on failure feeds the
+violations back and regenerates the whole day once. If the second attempt still
+fails, repeat uses of a banned bit are stripped before posting and the run is
+logged with `audit_clean: false`. Check `ff_daily_seed_log` for days that
+squeaked through dirty.
+
+The prompt-side rules below still matter — the audit is a backstop, not the
+author.
 
 Count them. If any answer is wrong, rewrite before inserting.
 
