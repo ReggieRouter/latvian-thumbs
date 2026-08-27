@@ -563,11 +563,15 @@ serve(async (req) => {
         // one. Effort lives INSIDE output_config, alongside format.
         output_config: {
           format: { type: 'json_schema', schema: SEED_SCHEMA },
-          // `low` cut output 12,090 -> ~3,200 tokens and fixed the timeout, but it
-          // also skipped the tail of a long instruction list — the politics lane
-          // landed ~1 message/day against a stated "several". `medium` restores
-          // instruction-following and still finishes far inside 150s.
-          effort: 'medium',
+          // Measured against the 150s edge ceiling, three ways:
+          //   high (the default when effort is unset): 12,090 output tokens, times out
+          //   medium:                                  times out at 150.3s
+          //   low:                                     ~3,200 tokens, succeeded 3/3
+          // So `low` is not a preference here, it is the only setting that fits.
+          // The thin-politics problem `medium` was meant to solve is fixed instead by
+          // giving that rule a NUMBER ("at least three") rather than "several" —
+          // concrete counts survive low effort, vague adverbs do not.
+          effort: 'low',
         },
           messages: [{ role: 'user', content: userContent }],
         }),

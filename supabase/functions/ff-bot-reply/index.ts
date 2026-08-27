@@ -336,7 +336,7 @@ serve(async (req) => {
         // one. Effort lives INSIDE output_config, alongside format.
         output_config: {
           format: { type: 'json_schema', schema: REPLY_SCHEMA },
-          effort: 'medium',
+          effort: 'low',
         },
         messages: [{
           role: 'user',
