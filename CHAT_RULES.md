@@ -83,13 +83,40 @@ A day that is mostly roster talk and league admin is a broken day. Target the
 texture of a bar conversation: it wanders, it derails, someone brings up
 something from their week, someone else makes it worse.
 
-## 2. Topic budget (hard limit)
+## 2. Topic budget (LEN-2547 — three lanes, not one cap)
 
-- **No more than 1 in 4 messages** may be about fantasy football, the draft,
-  keepers, rosters, waivers, dues, payment, or league logistics.
-- The other **3 in 4** are life and the world.
-- Football that does appear should be reactive and specific (an actual thing
-  that happened yesterday), never generic anticipation of the draft.
+This used to be a single 25% cap covering league admin **and** the sport
+itself, enforced by one regex. That cap was what suppressed actual football
+content: an injury report scored the same as chasing someone for dues. Split:
+
+| Lane | Budget | What it is |
+|---|---|---|
+| **League admin** | **max 15%** | dues, payment, venue, RSVPs, scheduling, keeper deadlines, commissioner rulings. The boring lane. Capped. |
+| **Football, the actual sport** | **up to 35%** | injuries, cuts, depth charts, suspensions, trades, a rookie who looks good, a veteran who looks finished, a half-read beat report — plus the arguing. **Wanted.** |
+| **Everything else** | the rest | life, and the world (§2b) |
+
+- Football that appears should be reactive and specific (an actual thing that
+  happened), never generic anticipation of the draft.
+- Bring news **in**, and let people be confidently wrong about it.
+
+### 2b. Politics and the world
+
+These are grown men who argue about the news and do not agree. **At least three
+messages a day** must take a real political or geopolitical position with
+conviction, and **at least one must draw a disagreement** so it becomes an
+argument rather than a statement nobody answers. Topics: —
+wars, borders, elections, immigration, trade, tariffs, energy, China, the
+Middle East, Europe, who is actually running things.
+
+- Positions **clash**. Each side is recognisably right about something and
+  wrong about something. Nobody wins.
+- **Nothing resolves.** Threads get abandoned when someone changes the subject
+  and restart days later with the grudge intact.
+- Members hold **standing positions** and keep them across days — that
+  consistency is what makes it read like people.
+- Somebody always tries to shut it down, and fails.
+- These are *their* opinions, in character, blunt. Not balanced, not sourced.
+  See §7 for the line that does not move.
 
 **Topic wheel — rotate, don't repeat within a week:**
 work and bosses and commutes · kids, parents, spouses, in-laws · what they ate
@@ -120,8 +147,23 @@ Each of these is funny about **once a week.** Cap: **at most one appearance per
 - Michael Camacho's Starbucks / stolen wifi / masturbatory-lifestyle line
 - Joe Camacho's "money is on the way"
 - Matt Sierra's "book it, this is the year" sleeper-WR bit
+- Jonathan Mootz's "Unsubscribe." and "you are all selfish of my feelings"
+- the toast Jonathan is owed, and any running day-count of it
+- George's "Sent from my iPad" sign-off
+- Casey-Ann signing off with her full name
+- Lars's "zed" bit and his "LD" sign-off
+- the doodle poll
 
-### The other four
+> **The cap is CROSS-DAY, and that is the whole point (LEN-2547).**
+> The audit used to score one day at a time, so a bit used exactly once a day
+> passed "max 1 per day" *every single day*. Measured over the 15 days before
+> the 2026-08-27 reset: "unsubscribe" appeared on **15 days out of 15**, "Sent
+> from my iPad" on 13, "if Gowa's in I'm out" **78 times across 13 days**.
+> A bit that ran in the last ~3 days now gets **zero** uses today, enforced in
+> code (`bitsSeenRecently` → `auditDay`/`dropRepeatBits`) and stated up front in
+> the prompt as a BURNED list.
+
+### The other five
 
 2. **Signature-tag throttle.** Catchphrases and sign-offs are garnish. At most
    one signature tag per turn (reactive) or per 10 messages (day script). A
@@ -134,6 +176,16 @@ Each of these is funny about **once a week.** Cap: **at most one appearance per
    X things") is a wasted slot. Rewrite it.
 5. **No stock openers.** If a line would have worked verbatim yesterday, it's
    wrong.
+6. **Evolve.** The chat moves forward; it does not reset each morning.
+   - **Escalate the people.** Each member is a slightly *more* extreme version
+     of who they were last week. Obsessions deepen, tics get stranger, someone
+     doing a bit starts to actually mean it.
+   - **Advance the storylines.** Anything ongoing must MOVE — something
+     happened since yesterday. Restating yesterday's situation is the failure.
+   - **Start things with consequences**, and carry at least one thread over.
+   - **Bust balls with a target.** Insults must be specific — name the member,
+     reference the actual thing they did. "You're an idiot" is nothing; "you're
+     the guy who drove to the wrong bar" is the joke.
 
 ## 4. Turn-to-turn build
 
@@ -170,8 +222,16 @@ combination, in any member's voice, regardless of what the history contains. The
 long-running "goyim/goyum" spelling bit and ordinary religion-adjacent ribbing
 are fine; the conspiracy-trope cluster is not.
 
+**On politics (§2b).** Members may hold and state harsh, one-sided, unpopular
+opinions — that is the point of the lane. They may **not** voice dehumanising
+claims about an ethnic, racial, or religious group as a class, and no political
+argument may route into the conspiracy cluster above. Governments, policies, and
+public figures' decisions are fair game; **peoples are not.**
+
 Also: no invented real-world claims about these people outside the joke frame —
-no fabricated crimes, medical facts, or family situations.
+no fabricated crimes, medical facts, or family situations. Invented *NFL* news
+is fine (it is a joke chat about a fake league) — keep it to the sport and keep
+it plausible.
 
 ## 8. Self-check before inserting a day script
 

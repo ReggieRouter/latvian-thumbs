@@ -93,14 +93,27 @@ each other. A chat that is mostly roster talk and league admin is a BROKEN chat
 overhear at a bar: it wanders, it derails, someone brings up something from
 their week, someone else makes it worse.
 
-TOPIC BUDGET (hard limit)
-- AT MOST ONE reply per turn may be about fantasy football, the draft, keepers,
-  rosters, waivers, dues, payment, or league logistics. Often zero.
-- Everything else is life and the world: work, family, food, weather, movies,
-  music, the news, travel, health, cars, money in general, getting old, phones,
-  other sports, neighbors, pets, nostalgia, petty grievances, stupid
-  hypotheticals, gossip about people who are not in this room.
-- If the visible history is already football-heavy, your reply must NOT be.
+TOPIC BUDGET
+Three lanes, same as the day script.
+- LEAGUE ADMIN is capped hard: AT MOST ONE reply per turn about dues, payment,
+  the venue, RSVPs, scheduling, keeper deadlines or commissioner rulings. Often
+  zero. This is the boring lane.
+- FOOTBALL AND FANTASY, THE ACTUAL SPORT, is NOT admin and is wanted: injuries,
+  cuts, depth charts, suspensions, trades, a rookie who looks good, a veteran
+  who looks finished, a beat report somebody half-read and got wrong — plus the
+  arguing about what it means. Bring news in and be confidently wrong about it.
+- EVERYTHING ELSE is the majority: work, family, food, weather, movies, music,
+  travel, health, cars, money, getting old, phones, other sports, neighbours,
+  pets, nostalgia, petty grievances, stupid hypotheticals, gossip about people
+  who are not in this room — and the world, below.
+
+POLITICS AND THE WORLD
+These are grown men who argue about the news and do not agree. A reply SHOULD
+often take a real political or geopolitical position with conviction — wars, borders,
+elections, immigration, trade, tariffs, energy, China, the Middle East, Europe,
+who is actually running things. Positions clash, nobody wins, nothing resolves,
+and members hold the SAME positions across days so old fights can restart.
+These are their opinions, in character, blunt, not balanced and not sourced.
 
 LOOP DISRUPTORS (the most important rules here — obey them literally)
 This chat's failure mode is a small set of bits repeating forever. Treat the
@@ -118,6 +131,12 @@ scan it and note which bits are already present. Then:
      • Michael Camacho's Starbucks / stolen wifi / masturbatory-lifestyle line
      • Joe Camacho's "money is on the way"
      • Matt Sierra's "book it, this is the year" sleeper-WR bit
+     • Jonathan Mootz's "Unsubscribe." and "you are all selfish of my feelings"
+     • the toast Jonathan is owed, and any running day-count of it
+     • George's "Sent from my iPad" sign-off
+     • Casey-Ann signing off with her full name
+     • Lars's "zed" bit and his "LD" sign-off
+     • the doodle poll
    Each is funny roughly once a week. None of them may appear twice in a row
    from the same member, ever.
 2. SIGNATURE-TAG THROTTLE. Catchphrases and sign-offs are garnish. At most ONE
@@ -132,6 +151,13 @@ scan it and note which bits are already present. Then:
    doing X things") is a wasted turn — delete it and write a real one.
 5. NO STOCK OPENERS. If a line you're about to write would have worked verbatim
    yesterday, it is wrong. Rewrite it around today's specifics.
+6. EVOLVE. These people are not frozen. Each member is a slightly MORE extreme
+   version of who they were last week — obsessions deepen, tics get stranger,
+   someone doing a bit starts to actually mean it. If the history shows an
+   ongoing storyline, ADVANCE it: something happened since, there is new
+   information or a consequence. And bust balls with a TARGET — name the member
+   and reference the actual thing they said or did. "You're an idiot" is
+   nothing; "you're the guy who drove to the wrong bar" is the joke.
 
 ${LEAGUE_CANON}
 
@@ -159,7 +185,9 @@ TONE
 Vulgar, mean, sarcastic, aggressively unserious. These are lifelong friends who
 insult each other constantly. Trash talk, keeper rage, threats to punch Gowa,
 testicle jokes, and accusations of commissioner abuse are all in-bounds and
-expected. Do not sanitize into corporate friendliness — that breaks the joke.
+expected. Political shots are blunt and personal too — these guys do not do
+polite disagreement. Do not sanitize into corporate friendliness — that breaks
+the joke.
 
 HARD CONTENT BOUNDARY (non-negotiable, overrides the tone rule above)
 Never generate material combining antisemitic conspiracy tropes — Satan-worship,
@@ -169,8 +197,15 @@ The long-running "goyim/goyum" spelling-correction bit and ordinary religion-
 adjacent ribbing are fine; the conspiracy-trope cluster is not. If the history
 contains something like that, do not continue or escalate it — change the
 subject in character.
+On politics specifically: members may hold and state harsh, one-sided, unpopular
+opinions — that is the point of the lane. They may NOT voice dehumanising claims
+about an ethnic, racial, or religious group as a class, and no political
+argument may route into the conspiracy cluster above. Governments, policies, and
+public figures' decisions are fair game; peoples are not.
 Also: do not invent real-world claims about these people outside the chat's joke
-frame (no fabricated crimes, medical facts, or family situations).
+frame (no fabricated crimes, medical facts, or family situations). Invented NFL
+news is fine — this is a joke chat about a fake league — but keep it to the
+sport and keep it plausible.
 
 OUTPUT
 Return JSON matching the schema: an array of replies, each with the member's
@@ -291,7 +326,18 @@ serve(async (req) => {
         // One frozen block so instructions + persona matrix cache as a unit.
         // Nothing per-request goes in here or the cache is busted every call.
         system: [{ type: 'text', text: INSTRUCTIONS + '\n\n' + PERSONAS, cache_control: { type: 'ephemeral' } }],
-        output_config: { format: { type: 'json_schema', schema: REPLY_SCHEMA } },
+        // LEN-2547: Sonnet 5 runs ADAPTIVE THINKING BY DEFAULT when `thinking` is
+        // omitted, at the default effort of `high` — and thinking bills as output
+        // tokens. Measured: 12,090 output tokens per call to produce a day whose
+        // finished text is under 1,000 tokens. ~11k tokens per call were invisible
+        // reasoning, and at Sonnet's output rate that is what pushed generation past
+        // the 150s edge ceiling — the timeout was never really about message count.
+        // `low` is the documented setting for simple tasks; writing a day of chat is
+        // one. Effort lives INSIDE output_config, alongside format.
+        output_config: {
+          format: { type: 'json_schema', schema: REPLY_SCHEMA },
+          effort: 'low',
+        },
         messages: [{
           role: 'user',
           content:
