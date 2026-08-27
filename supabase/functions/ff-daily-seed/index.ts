@@ -440,7 +440,12 @@ serve(async (req) => {
   const { data: seedLog } = await db
     .from('ff_daily_seed_log').select('et_date, rows').eq('et_date', etDate).maybeSingle();
 
-  if ((existing || 0) > 0 && seedLog) {
+  // LEN-2547: `&& !body.force` was missing here, and this branch sits ABOVE the
+  // force-clear below — so force:true could never redo a day this function had
+  // already seeded. That is the one case force exists for (the docs and the
+  // LEN-1593 notes both say "to redo a day, invoke with force:true"), and it
+  // silently returned already_seeded instead.
+  if ((existing || 0) > 0 && seedLog && !body.force) {
     return json(200, { skipped: 'already_seeded', date: etDate, existing });
   }
   if ((existing || 0) > 0 && !seedLog && !body.force) {
