@@ -326,7 +326,18 @@ serve(async (req) => {
         // One frozen block so instructions + persona matrix cache as a unit.
         // Nothing per-request goes in here or the cache is busted every call.
         system: [{ type: 'text', text: INSTRUCTIONS + '\n\n' + PERSONAS, cache_control: { type: 'ephemeral' } }],
-        output_config: { format: { type: 'json_schema', schema: REPLY_SCHEMA } },
+        // LEN-2547: Sonnet 5 runs ADAPTIVE THINKING BY DEFAULT when `thinking` is
+        // omitted, at the default effort of `high` — and thinking bills as output
+        // tokens. Measured: 12,090 output tokens per call to produce a day whose
+        // finished text is under 1,000 tokens. ~11k tokens per call were invisible
+        // reasoning, and at Sonnet's output rate that is what pushed generation past
+        // the 150s edge ceiling — the timeout was never really about message count.
+        // `low` is the documented setting for simple tasks; writing a day of chat is
+        // one. Effort lives INSIDE output_config, alongside format.
+        output_config: {
+          format: { type: 'json_schema', schema: REPLY_SCHEMA },
+          effort: 'low',
+        },
         messages: [{
           role: 'user',
           content:
